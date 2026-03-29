@@ -1,12 +1,20 @@
 <?php
+declare(strict_types=1);
+
 // 1. Initialisation de la session en tout premier
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require 'config.php'; 
+require_once 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        echo "Session expirée, merci de recharger la page.";
+        exit;
+    }
+
     // Nettoyage des entrées pour éviter les espaces accidentels
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
@@ -21,21 +29,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user) {
                 // Utilisation du nom de colonne exact 'mot_de_passe'
-                $hash = $user['mot_de_passe']; 
+                $hash = $user['mot_de_passe'];
+
                 if (password_verify($password, $hash)) {
                     // --- CONNEXION RÉUSSIE ---
                     session_regenerate_id(true);
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['id'] = $user['id'];
-                    $_SESSION['pseudo'] = $user['pseudo']; 
+                    $_SESSION['pseudo'] = $user['pseudo'];
                     $_SESSION['email'] = $user['email'];
 
                     // Gestion du "Se souvenir de moi" (Cookies valables 30 jours)
                     if ($remember) {
-                        setcookie('user_email', $email, time() + (3600 * 24 * 30), "/");
+                        setcookie('user_email', $email, [
+                            'expires' => time() + (3600 * 24 * 30),
+                            'path' => '/',
+                            'httponly' => true,
+                            'samesite' => 'Lax',
+                        ]);
                     } else {
                         // On supprime les cookies si la case n'est pas cochée
-                        setcookie('user_email', '', time() - 3600, "/");
+                        setcookie('user_email', '', [
+                            'expires' => time() - 3600,
+                            'path' => '/',
+                            'httponly' => true,
+                            'samesite' => 'Lax',
+                        ]);
                     }
 
                     echo "success";
@@ -46,7 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo "Aucun compte Big Monkey trouvé pour cet email.";
             }
         } catch (PDOException $e) {
-            echo "Erreur BDD : " . $e->getMessage();
+            error_log("Erreur Connexion : " . $e->getMessage());
+            echo "Une erreur technique est survenue.";
         }
     } else {
         echo "Veuillez remplir tous les champs.";
