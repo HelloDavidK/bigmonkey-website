@@ -123,7 +123,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     /* =========================================
-       6. GESTION DE LA BULLE "NOUS CONTACTER"
+       6. GESTION DU MENU UTILISATEUR (SESSION CONNECTÉE)
+       ========================================= */
+    const userTrigger = document.getElementById('user-top-zone');
+    const userDropdown = document.querySelector('.user-dropdown');
+
+    if (userTrigger && userDropdown) {
+        userTrigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            userDropdown.classList.toggle('show');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!userDropdown.contains(e.target) && !userTrigger.contains(e.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    /* =========================================
+       7. GESTION DE LA BULLE "NOUS CONTACTER"
        ========================================= */
     const contactTrigger = document.getElementById('contactTrigger');
     const contactBubble = document.getElementById('contactBubble');
@@ -149,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 /* =========================================
-   7. FONCTIONS GLOBALES (SLIDER & FILTRES)
+   8. FONCTIONS GLOBALES (SLIDER & FILTRES)
    ========================================= */
 
 // --- GESTION DU SLIDER (ACCUEIL) ---
