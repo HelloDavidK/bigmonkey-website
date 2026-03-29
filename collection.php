@@ -1,87 +1,73 @@
 <?php
-// 1. Initialisation et Sécurité
-if (session_status() === PHP_SESSION_NONE) { 
-    session_start(); 
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
-require_once 'config.php'; // Toujours en premier pour avoir $pdo !
+
+require_once 'config.php';
+
+$rawCategory = isset($_GET['cat']) ? (string) $_GET['cat'] : 'tous';
+$category = preg_match('/^[a-zA-Z0-9_-]{1,50}$/', $rawCategory) ? $rawCategory : 'tous';
+
 include 'header.php';
 
-// 2. Récupération de la catégorie via l'URL (ex: collection.php?cat=eliquide)
-$category = isset($_GET['cat']) ? $_GET['cat'] : 'tous';
+/**
+ * @param mixed $value
+ */
+function e($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
 ?>
+
 <div class="banner-container">
-    <?php if(!isset($_SESSION['user_id'])): ?>
-        
+    <?php if (!isset($_SESSION['user_id'])): ?>
         <a href="compte.php" class="banner-link banner-desktop">
             <img src="img/banière image.jpg" alt="Rejoignez Big Monkey">
         </a>
         <a href="compte.php" class="banner-link banner-mobile">
             <img src="img/baniere-mobile.jpg" alt="Rejoignez Big Monkey Mobile">
         </a>
-
     <?php else: ?>
-
-        <div class="slider-wrapper">
+        <div class="slider-wrapper" aria-label="Bannières promotionnelles">
             <div class="slides">
-                
-                <div class="slide">
-                    <a href="nouveautes.php" class="banner-link banner-desktop">
+                <div class="slide active">
+                    <a href="collection.php?cat=nouveautes" class="banner-link banner-desktop">
                         <img src="img/slider1-pc.jpg" alt="Nouveautés E-liquides">
                     </a>
-                    <a href="nouveautes.php" class="banner-link banner-mobile">
+                    <a href="collection.php?cat=nouveautes" class="banner-link banner-mobile">
                         <img src="img/slider1-mobile.jpg" alt="Nouveautés E-liquides Mobile">
                     </a>
                 </div>
 
                 <div class="slide">
-                    <a href="bons-plans.php" class="banner-link banner-desktop">
+                    <a href="collection.php?cat=bons-plans" class="banner-link banner-desktop">
                         <img src="img/slider2-pc.jpg" alt="Promotions Matériel">
                     </a>
-                    <a href="bons-plans.php" class="banner-link banner-mobile">
+                    <a href="collection.php?cat=bons-plans" class="banner-link banner-mobile">
                         <img src="img/slider2-mobile.jpg" alt="Promotions Matériel Mobile">
                     </a>
                 </div>
-
             </div>
-            
-            <div class="slider-dots">
+
+            <div class="slider-dots" aria-hidden="true">
                 <span class="dot active"></span>
                 <span class="dot"></span>
             </div>
         </div>
-
     <?php endif; ?>
-    <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
-    let currentSlide = 0;
-
-    if (slides.length > 0) {
-        setInterval(() => {
-            slides[currentSlide].classList.remove('active');
-            dots[currentSlide].classList.remove('active');
-            
-            currentSlide = (currentSlide + 1) % slides.length;
-            
-            // Logique de défilement simplifiée (ou utilisez transform: translateX)
-            const container = document.querySelector('.slides');
-            container.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            dots[currentSlide].classList.add('active');
-        }, 4000); // 4 secondes
-    }
-});
-</script>
 </div>
+
 <div class="promo-bar-container">
     <div class="promo-bar-content">
         10% DE REMISE SUR VOTRE PREMIÈRE COMMANDE
     </div>
 </div>
+
 <section class="demo-assurance-compact">
     <div class="slider-container-wrapper">
-        <button class="slider-arrow prev" onclick="moveSlide(-1)">&#10094;</button>
+        <button class="slider-arrow prev" onclick="moveSlide(-1)" aria-label="Slide précédent">&#10094;</button>
 
         <div class="slider-track">
             <div class="demo-item-compact">
@@ -91,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p>Fioles premium certifiées importées de France.</p>
                 </div>
             </div>
-            
+
             <div class="demo-item-compact">
                 <img src="img/livraison-icon.svg" alt="Livraison">
                 <div class="text-wrapper-compact">
@@ -109,24 +95,23 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
 
-        <button class="slider-arrow next" onclick="moveSlide(1)">&#10095;</button>
+        <button class="slider-arrow next" onclick="moveSlide(1)" aria-label="Slide suivant">&#10095;</button>
     </div>
 </section>
 
 <div class="mobile-filter-trigger" id="openFilters">
-    <i class="fas fa-filter"></i> FILTRER LES PRODUITS
+    <i class="fas fa-filter" aria-hidden="true"></i> FILTRER LES PRODUITS
 </div>
 
 <div class="container-collection">
-    
     <aside class="sidebar-filters" id="filterDrawer">
         <div class="filter-header-mobile">
             <span>FILTRES</span>
-            <span id="closeFilters">&times;</span>
+            <span id="closeFilters" style="cursor:pointer; font-size:1.5rem;" aria-label="Fermer">&times;</span>
         </div>
-        
+
         <h2 class="filter-title">FILTRER PAR</h2>
-        
+
         <div class="filter-group">
             <h3>MARQUES</h3>
             <ul>
@@ -143,74 +128,93 @@ document.addEventListener('DOMContentLoaded', function() {
                 <li><input type="checkbox" name="saveur[]" id="frais" value="Frais"> <label for="frais">Frais</label></li>
             </ul>
         </div>
-        
-        <button class="btn-apply-filters">APPLIQUER</button>
+
+        <button class="btn-apply-filters" type="button">APPLIQUER</button>
     </aside>
 
     <main class="products-grid-container">
         <div class="collection-header">
-            <h1><?php echo strtoupper(htmlspecialchars($category)); ?></h1>
+            <h1><?= strtoupper(e($category)); ?></h1>
             <p>Découvrez notre sélection exclusive Big Monkey.</p>
         </div>
 
         <div class="products-grid">
             <?php
-            // --- LE MOTEUR DYNAMIQUE ---
-            
-            // On prépare la requête de base
-            $sql = "SELECT * FROM produits WHERE is_active = 1";
+            $sql = 'SELECT * FROM produits WHERE is_active = 1';
             $params = [];
 
-            // Si on ne demande pas "tous" les produits, on filtre par catégorie
             if ($category !== 'tous') {
-                $sql .= " AND (categorie_parent = :cat OR slug = :cat)";
+                $sql .= ' AND (categorie_parent = :cat OR slug = :cat)';
                 $params['cat'] = $category;
             }
 
-            // Exécution sécurisée
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
-            $produits = $stmt->fetchAll();
+            $produits = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // S'il y a des produits, on les affiche
-            if (count($produits) > 0):
-                foreach ($produits as $p): 
-                    // On vérifie s'il y a un prix promo
-                    $prix_final = !empty($p['prix_promo']) ? $p['prix_promo'] : $p['prix_regulier'];
-            ?>
-                
-                <div class="product-card">
-                    <?php if ($p['is_promo']): ?>
-                        <div class="badge-promo">BONS PLANS</div>
-                    <?php endif; ?>
-                    
-                    <img src="img/produits/<?php echo htmlspecialchars($p['image_principale']); ?>" alt="<?php echo htmlspecialchars($p['nom']); ?>">
-                    
-                    <span class="product-brand"><?php echo htmlspecialchars($p['marque'] ?? 'Big Monkey'); ?></span>
-                    <h3 class="product-name"><?php echo htmlspecialchars($p['nom']); ?></h3>
-                    
-                    <div class="product-price">
-                        <?php if (!empty($p['prix_promo'])): ?>
-                            <span style="text-decoration: line-through; font-size: 0.8rem; color: #888;">
-                                <?php echo number_format($p['prix_regulier'], 0, '.', ' '); ?> Ar
-                            </span><br>
+            if (!empty($produits)):
+                foreach ($produits as $p):
+                    $prixRegulier = (float) ($p['prix_regulier'] ?? 0);
+                    $prixPromo = isset($p['prix_promo']) && $p['prix_promo'] !== null ? (float) $p['prix_promo'] : null;
+                    $prixFinal = $prixPromo ?: $prixRegulier;
+                    ?>
+                    <div class="product-card">
+                        <?php if (!empty($p['is_promo'])): ?>
+                            <div class="badge-promo">BONS PLANS</div>
                         <?php endif; ?>
-                        
-                        <?php echo number_format($prix_final, 0, '.', ' '); ?> <span>Ar</span>
-                    </div>
-                    
-                    <a href="produit.php?slug=<?php echo htmlspecialchars($p['slug']); ?>" class="btn-view">VOIR LE PRODUIT</a>
-                </div>
 
-            <?php 
-                endforeach; 
-            else: 
-                // Message si la catégorie est vide
-                echo "<p style='grid-column: 1 / -1; text-align: center; color: #fff;'>Aucun produit trouvé dans cette catégorie pour le moment.</p>";
-            endif; 
-            ?>
+                        <img src="img/produits/<?= e($p['image_principale'] ?? 'placeholder.jpg'); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
+
+                        <span class="product-brand"><?= e($p['marque'] ?? 'Big Monkey'); ?></span>
+                        <h3 class="product-name"><?= e($p['nom'] ?? 'Produit'); ?></h3>
+
+                        <div class="product-price">
+                            <?php if ($prixPromo): ?>
+                                <span style="text-decoration: line-through; font-size: 0.8rem; color: #888;">
+                                    <?= number_format($prixRegulier, 0, '.', ' '); ?> Ar
+                                </span><br>
+                            <?php endif; ?>
+
+                            <?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span>
+                        </div>
+
+                        <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view">VOIR LE PRODUIT</a>
+                    </div>
+                <?php
+                endforeach;
+            else:
+                ?>
+                <p style="grid-column: 1 / -1; text-align: center; color: #7b8794; font-weight: 700;">
+    Aucun produit trouvé dans cette catégorie pour le moment.
+</p>
+                </p>
+            <?php endif; ?>
         </div>
     </main>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.dot');
+        const container = document.querySelector('.slides');
+        let currentSlide = 0;
+
+        if (!container || slides.length < 2 || dots.length < 2) {
+            return;
+        }
+
+        window.setInterval(function () {
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.remove('active');
+
+            currentSlide = (currentSlide + 1) % slides.length;
+            container.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }, 4000);
+    });
+</script>
 
 <?php include 'footer.php'; ?>
