@@ -1,66 +1,118 @@
 <?php
+declare(strict_types=1);
+
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-if (!isset($_SESSION['pseudo'])) {
+if (!isset($_SESSION['user_id'])) {
     header('Location: compte.php');
     exit();
 }
 
 require_once 'config.php';
-$pseudo_session = $_SESSION['pseudo'];
+$userId = (int) $_SESSION['user_id'];
 $message_status = "";
+
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
 
 // --- LOGIQUE DE TRAITEMENT (POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
-    // 1. Mise à jour Infos Personnelles
-    if (isset($_POST['update_perso'])) {
-        $stmt = $pdo->prepare("UPDATE utilisateurs SET pseudo = ?, email = ?, telephone = ? WHERE pseudo = ?");
-        $stmt->execute([$_POST['pseudo'], $_POST['email'], $_POST['tel'], $pseudo_session]);
-        $_SESSION['pseudo'] = $_POST['pseudo'];
-        $pseudo_session = $_POST['pseudo'];
-        $message_status = "Profil mis à jour !";
-    }
+    $postedToken = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($csrfToken, $postedToken)) {
+        $message_status = "Session expirée, merci de recharger la page.";
+    } else {
+        try {
+            // 1. Mise à jour Infos Personnelles
+            if (isset($_POST['update_perso'])) {
+                $pseudo = trim($_POST['pseudo'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $tel = trim($_POST['tel'] ?? '');
 
-    // 2. Gestion des Adresses (Sauvegarde / Ajout)
-    if (isset($_POST['update_addr1'])) {
-        $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_1 = ?, quartier_1 = ?, ville_1 = ? WHERE pseudo = ?");
-        $stmt->execute([$_POST['line1'], $_POST['quartier1'], $_POST['ville1'], $pseudo_session]);
-        $message_status = "Adresse 1 enregistrée !";
-    }
-    if (isset($_POST['add_addr2'])) {
-        $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_2 = ?, quartier_2 = ?, ville_2 = ? WHERE pseudo = ?");
-        $stmt->execute([$_POST['line2'], $_POST['quartier2'], $_POST['ville2'], $pseudo_session]);
-        $message_status = "Adresse 2 enregistrée !";
-    }
+                if ($pseudo === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $message_status = "Pseudo / Email invalide.";
+                } else {
+                    $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ? AND id != ?");
+                    $check->execute([$email, $userId]);
+                    if ($check->fetch()) {
+                        $message_status = "Cet email est déjà utilisé.";
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE utilisateurs SET pseudo = ?, email = ?, telephone = ? WHERE id = ?");
+                        $stmt->execute([$pseudo, $email, $tel, $userId]);
+                        $_SESSION['pseudo'] = $pseudo;
+                        $_SESSION['email'] = $email;
+                        $message_status = "Profil mis à jour !";
+                    }
+                }
+            }
 
-    // 3. LOGIQUE DE SUPPRESSION (SOUCI 3 RÉGLÉ)
-    if (isset($_POST['delete_addr1'])) {
-        $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_1 = NULL, quartier_1 = NULL, ville_1 = NULL WHERE pseudo = ?");
-        $stmt->execute([$pseudo_session]);
-        $message_status = "Adresse 1 supprimée.";
-    }
-    if (isset($_POST['delete_addr2'])) {
-        $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_2 = NULL, quartier_2 = NULL, ville_2 = NULL WHERE pseudo = ?");
-        $stmt->execute([$pseudo_session]);
-        $message_status = "Adresse 2 supprimée.";
-    }
+            // 2. Gestion des Adresses (Sauvegarde / Ajout)
+            if (isset($_POST['update_addr1'])) {
+                $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_1 = ?, quartier_1 = ?, ville_1 = ? WHERE id = ?");
+                $stmt->execute([
+                    trim($_POST['line1'] ?? ''),
+                    trim($_POST['quartier1'] ?? ''),
+                    trim($_POST['ville1'] ?? ''),
+                    $userId
+                ]);
+                $message_status = "Adresse 1 enregistrée !";
+            }
+            if (isset($_POST['add_addr2'])) {
+                $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_2 = ?, quartier_2 = ?, ville_2 = ? WHERE id = ?");
+                $stmt->execute([
+                    trim($_POST['line2'] ?? ''),
+                    trim($_POST['quartier2'] ?? ''),
+                    trim($_POST['ville2'] ?? ''),
+                    $userId
+                ]);
+                $message_status = "Adresse 2 enregistrée !";
+            }
 
-    // 4. Gestion Mot de Passe
-    if (isset($_POST['update_pwd'])) {
-        if (!empty($_POST['new_pwd']) && $_POST['new_pwd'] === $_POST['conf_pwd']) {
-            $hash = password_hash($_POST['new_pwd'], PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("UPDATE utilisateurs SET mot_de_passe = ? WHERE pseudo = ?");
-            $stmt->execute([$hash, $pseudo_session]);
-            $message_status = "Mot de passe modifié !";
+            // 3. LOGIQUE DE SUPPRESSION
+            if (isset($_POST['delete_addr1'])) {
+                $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_1 = NULL, quartier_1 = NULL, ville_1 = NULL WHERE id = ?");
+                $stmt->execute([$userId]);
+                $message_status = "Adresse 1 supprimée.";
+            }
+            if (isset($_POST['delete_addr2'])) {
+                $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_2 = NULL, quartier_2 = NULL, ville_2 = NULL WHERE id = ?");
+                $stmt->execute([$userId]);
+                $message_status = "Adresse 2 supprimée.";
+            }
+
+            // 4. Gestion Mot de Passe
+            if (isset($_POST['update_pwd'])) {
+                $newPwd = $_POST['new_pwd'] ?? '';
+                $confPwd = $_POST['conf_pwd'] ?? '';
+                if ($newPwd === '' || strlen($newPwd) < 8) {
+                    $message_status = "Le mot de passe doit contenir au moins 8 caractères.";
+                } elseif ($newPwd !== $confPwd) {
+                    $message_status = "Les deux mots de passe ne correspondent pas.";
+                } else {
+                    $hash = password_hash($newPwd, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("UPDATE utilisateurs SET mot_de_passe = ? WHERE id = ?");
+                    $stmt->execute([$hash, $userId]);
+                    $message_status = "Mot de passe modifié !";
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("Erreur Profil : " . $e->getMessage());
+            $message_status = "Une erreur technique est survenue.";
         }
     }
 }
 
 // RÉCUPÉRATION DES DONNÉES UTILISATEUR
-$query = $pdo->prepare("SELECT * FROM utilisateurs WHERE pseudo = ?");
-$query->execute([$pseudo_session]);
+$query = $pdo->prepare("SELECT * FROM utilisateurs WHERE id = ?");
+$query->execute([$userId]);
 $user = $query->fetch();
+
+if (!$user) {
+    session_destroy();
+    header('Location: compte.php');
+    exit();
+}
 
 include 'header.php'; 
 ?>
@@ -77,6 +129,7 @@ include 'header.php';
         <h1 style="text-align: center; text-transform: uppercase; font-weight: 900; margin-bottom: 30px; letter-spacing: 1px;">Mon Profil</h1>
 
         <form method="POST" style="border: 1px solid #eee; padding: 20px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #ffcc00; margin-bottom: 15px; padding-bottom: 5px;">
                 <h2 style="font-size: 1.1rem; margin: 0; text-transform: uppercase;">Mes Informations</h2>
                 <button type="button" onclick="toggleSet('perso')" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;"><i class="fas fa-edit"></i></button>
@@ -106,6 +159,7 @@ include 'header.php';
                     <div style="display: flex; gap: 15px;">
                         <button type="button" onclick="toggleSet('addr1')" style="background:none; border:none; cursor:pointer; font-size: 1.1rem;"><i class="fas fa-edit"></i></button>
                         <form method="POST" id="form-delete-1">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="delete_addr1" value="1">
                             <button type="button" onclick="showConfirm(1)" style="background:none; border:none; cursor:pointer; color: #ff4444; font-size: 1.1rem;"><i class="fas fa-times-circle"></i></button>
                         </form>
@@ -117,6 +171,7 @@ include 'header.php';
                 </div>
                 <div class="edit-mode" style="display:none;">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="text" name="line1" value="<?= htmlspecialchars($user['adresse_1']) ?>" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #ddd;">
                         <div style="display:flex; gap:8px;">
                             <input type="text" name="quartier1" value="<?= htmlspecialchars($user['quartier_1']) ?>" placeholder="Quartier" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -135,6 +190,7 @@ include 'header.php';
                     <div style="display: flex; gap: 15px;">
                         <button type="button" onclick="toggleSet('addr2')" style="background:none; border:none; cursor:pointer; font-size: 1.1rem;"><i class="fas fa-edit"></i></button>
                         <form method="POST" id="form-delete-2">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                             <input type="hidden" name="delete_addr2" value="1">
                             <button type="button" onclick="showConfirm(2)" style="background:none; border:none; cursor:pointer; color: #ff4444; font-size: 1.1rem;"><i class="fas fa-times-circle"></i></button>
                         </form>
@@ -146,6 +202,7 @@ include 'header.php';
                 </div>
                 <div class="edit-mode" style="display:none;">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="text" name="line2" value="<?= htmlspecialchars($user['adresse_2']) ?>" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:1px solid #ddd;">
                         <div style="display:flex; gap:8px;">
                             <input type="text" name="quartier2" value="<?= htmlspecialchars($user['quartier_2']) ?>" placeholder="Quartier" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -163,6 +220,7 @@ include 'header.php';
                 </button>
                 <div id="group-new-addr" style="display: none; margin-top: 15px; background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 15px;">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <?php $target = empty($user['adresse_1']) ? 'line1' : 'line2'; ?>
                         <?php $btn_name = empty($user['adresse_1']) ? 'update_addr1' : 'add_addr2'; ?>
                         <input type="text" name="<?= $target ?>" placeholder="Adresse (ex: Lot IVG...)" required style="width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;">
@@ -180,6 +238,7 @@ include 'header.php';
         </div>
 
         <form method="POST" style="border: 1px solid #eee; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #ffcc00; margin-bottom: 15px; padding-bottom: 5px;">
                 <h2 style="font-size: 1.1rem; margin: 0; text-transform: uppercase;">Sécurité</h2>
                 <button type="button" onclick="toggleSet('pwd')" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;"><i class="fas fa-edit"></i></button>
@@ -259,12 +318,20 @@ function toggleSet(id) {
 </script>
 <script>
     // Exemple de script qui doit être présent sur TOUTES les pages
-    document.querySelector('.mobile-toggle').addEventListener('click', function() {
-        document.querySelector('.mobile-drawer').classList.toggle('open');
-    });
-    document.querySelector('.close-drawer').addEventListener('click', function() {
-        document.querySelector('.mobile-drawer').classList.remove('open');
-    });
+    const mobileToggle = document.querySelector('.mobile-toggle');
+    const mobileDrawer = document.querySelector('.mobile-drawer');
+    const closeDrawer = document.querySelector('.close-drawer');
+
+    if (mobileToggle && mobileDrawer) {
+        mobileToggle.addEventListener('click', function() {
+            mobileDrawer.classList.toggle('open');
+        });
+    }
+    if (closeDrawer && mobileDrawer) {
+        closeDrawer.addEventListener('click', function() {
+            mobileDrawer.classList.remove('open');
+        });
+    }
 
 const toggleButtons = document.querySelectorAll('.toggle-submenu');
 
