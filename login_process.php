@@ -22,20 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user) {
                 // Utilisation du nom de colonne exact 'mot_de_passe'
                 $hash = $user['mot_de_passe']; 
-
                 if (password_verify($password, $hash)) {
                     // --- CONNEXION RÉUSSIE ---
+                    session_regenerate_id(true);
                     $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['id'] = $user['id'];
                     $_SESSION['pseudo'] = $user['pseudo']; 
+                    $_SESSION['email'] = $user['email'];
 
                     // Gestion du "Se souvenir de moi" (Cookies valables 30 jours)
                     if ($remember) {
                         setcookie('user_email', $email, time() + (3600 * 24 * 30), "/");
-                        setcookie('user_password', $password, time() + (3600 * 24 * 30), "/");
                     } else {
                         // On supprime les cookies si la case n'est pas cochée
                         setcookie('user_email', '', time() - 3600, "/");
-                        setcookie('user_password', '', time() - 3600, "/");
                     }
 
                     echo "success";
