@@ -15,7 +15,11 @@ body {
     overflow-x: hidden;
 }
 
-a { text-decoration: none; color: inherit; transition: 0.3s; }
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s ease, opacity 0.3s ease;
+}
 ul { list-style: none; }
 img { max-width: 100%; display: block; }
 
@@ -49,9 +53,10 @@ img { max-width: 100%; display: block; }
     height: 100%;
     
     /* Flexbox ici pour centrer le texte à l'intérieur de l'item */
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0 10px;
     
     text-align: center;
     font-size: 11px;
@@ -59,6 +64,8 @@ img { max-width: 100%; display: block; }
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap; /* Empêche le texte de revenir à la ligne */
+    overflow: hidden;
+    text-overflow: ellipsis;
     
     opacity: 0;
     animation: fade-announcement 12s infinite;
@@ -78,6 +85,13 @@ img { max-width: 100%; display: block; }
 /* Correction PC */
 @media (min-width: 769px) {
     .announcement-bar { background: #ffffff; color: #000000; border-bottom: 1px solid #eee; }
+}
+@media (max-width: 480px) {
+    .announcement-item {
+        font-size: 10px;
+        letter-spacing: 0.3px;
+        padding: 0 8px;
+    }
 }
 /* =========================================
     CORRECTIF MOBILE (LOGO, MENU, PANIER)
@@ -150,6 +164,8 @@ img { max-width: 100%; display: block; }
     color: #fff;
     padding: 8px 20px;
     font-size: 13px;
+    position: relative;
+    z-index: 4000;
 }
 
 .top-bar-content {
@@ -243,6 +259,22 @@ img { max-width: 100%; display: block; }
 .user-menu-container {
     position: relative;
     display: inline-block;
+    z-index: 3000;
+}
+
+.user-trigger-btn {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.user-trigger-btn:focus-visible {
+    outline: 2px solid #ffcc00;
+    outline-offset: 3px;
+    border-radius: 6px;
 }
 
 /* Style de la bulle (cachée par défaut) */
@@ -277,7 +309,7 @@ img { max-width: 100%; display: block; }
     display: block;
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
     text-align: left;
 }
 
@@ -291,6 +323,13 @@ img { max-width: 100%; display: block; }
 .user-dropdown.show {
     display: block;
     animation: fadeInScale 0.2s ease-out;
+}
+
+/* Fallback UX: ouverture au survol sur desktop, même si JS est perturbé */
+@media (min-width: 769px) {
+    .user-menu-container:hover .user-dropdown {
+        display: block;
+    }
 }
 
 @keyframes fadeInScale {
@@ -307,17 +346,56 @@ img { max-width: 100%; display: block; }
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 25px;
+        gap: 28px;
         border-top: 1px solid #f4f4f4;
-        padding-top: 8px;
+        padding-top: 10px;
+        padding-bottom: 6px;
         flex-wrap: nowrap;
     }
 
     .desktop-menu ul li {
         position: relative;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
     }
-.has-mega-menu > a { cursor: pointer; }
+
+    .desktop-menu > ul > li > a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        color: #1f2937;
+        padding: 8px 4px;
+        transition: color 0.2s ease;
+    }
+
+    .desktop-menu > ul > li > a::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -4px;
+        width: 100%;
+        height: 2px;
+        background: #111;
+        transform: scaleX(0);
+        transform-origin: center;
+        transition: transform 0.2s ease;
+    }
+
+    .desktop-menu > ul > li:hover > a::after,
+    .desktop-menu > ul > li.active > a::after {
+        transform: scaleX(1);
+    }
+
+    .desktop-menu > ul > li:hover > a {
+        color: #111;
+    }
+
+    .has-mega-menu > a {
+        cursor: pointer;
+    }
+
     .desktop-menu ul li.promo a {
         color: #e74c3c !important;
         font-weight: 700;
@@ -325,22 +403,25 @@ img { max-width: 100%; display: block; }
 
     .menu-arrow {
         font-size: 9px;
-        margin-left: 4px;
+        margin-left: 2px;
         cursor: pointer;
         display: inline-block;
         transition: transform 0.3s;
+        opacity: 0.8;
     }
 
     .mega-menu {
         display: none;
         position: absolute;
-        top: 100%;
+        top: calc(100% + 10px);
         left: 0;
         background: #fff;
-        width: 850px; 
-        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        padding: 40px 30px;
-        z-index: 2000;
+        width: min(920px, 92vw);
+        box-shadow: 0 18px 40px rgba(17, 17, 17, 0.14);
+        padding: 28px 26px;
+        z-index: 3500;
+        border: 1px solid #eceff3;
+        border-radius: 14px;
         border-top: 4px solid #000;
     }
 
@@ -354,34 +435,38 @@ img { max-width: 100%; display: block; }
 
     .mega-container {
         display: flex;
-        justify-content: flex-start;
+        justify-content: space-between;
         align-items: flex-start;
+        gap: 10px;
     }
 
     .mega-col {
-        width: 280px;
-        padding: 0 25px;
+        width: 100%;
+        max-width: 280px;
+        padding: 0 18px;
         text-align: center;
     }
 
     .mega-col.separator {
-        border-left: 1px solid #eee;
-        border-right: 1px solid #eee;
+        border-left: 1px solid #f0f2f5;
+        border-right: 1px solid #f0f2f5;
     }
 
     .mega-col h3 {
-        font-size: 15px;
+        font-size: 14px;
         text-transform: uppercase;
-        margin-bottom: 25px;
-        color: #000;
+        margin-bottom: 18px;
+        color: #111;
         font-weight: 800;
-        letter-spacing: 1px;
+        letter-spacing: 0.9px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f1f3f6;
     }
 
     .icon-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
+        gap: 12px;
         justify-items: center;
     }
 
@@ -389,37 +474,57 @@ img { max-width: 100%; display: block; }
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
-        transition: transform 0.2s;
+        justify-content: center;
+        gap: 9px;
+        width: 100%;
+        min-height: 112px;
+        padding: 10px 8px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: #fafbfc;
+        transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .icon-item:hover {
-        transform: scale(1.08);
+        transform: translateY(-2px);
+        border-color: #e6eaf0;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     }
 
     .icon-item img {
-        width: 65px; 
+        width: 58px; 
         height: auto;
     }
 
     .icon-item span {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
-        color: #333;
+        color: #293241;
+        line-height: 1.2;
     }
 
     .all-link {
-        display: inline-block;
-        margin-top: 25px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 18px;
+        padding: 9px 14px;
         font-weight: 800;
-        text-decoration: underline;
-        color: #000;
-        font-size: 13px;
-        transition: color 0.3s;
+        text-decoration: none;
+        color: #111;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+        border: 1px solid #d8dde5;
+        border-radius: 999px;
+        background: #fff;
+        transition: all 0.2s ease;
     }
 
     .all-link:hover {
-        color: #3498db;
+        color: #fff;
+        background: #111;
+        border-color: #111;
     }
 
     .menu-search-container {
@@ -429,22 +534,27 @@ img { max-width: 100%; display: block; }
     .menu-search-container form {
         display: flex;
         align-items: center;
-        border: 1.5px solid #000;
-        border-radius: 20px;
-        padding: 4px 12px;
+        border: 1px solid #cfd4dc;
+        border-radius: 24px;
+        padding: 5px 14px;
         background: #fff;
-        width: 180px;
-        transition: 0.3s;
+        width: 210px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        transition: width 0.3s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .menu-search-container form:focus-within { width: 220px; }
+    .menu-search-container form:focus-within {
+        width: 250px;
+        border-color: #111;
+        box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+    }
 
     .menu-search-container input {
         border: none;
         outline: none;
         background: transparent;
         width: 100%;
-        font-size: 12px;
+        font-size: 14px;
     }
 
     .search-btn {
@@ -460,7 +570,7 @@ img { max-width: 100%; display: block; }
 .banner-container {
     width: 100%;
     position: relative;
-    z-index: 1; /* S'assure que la bannière est cliquable sous le header */
+    z-index: 5; /* Cohérent avec le bloc bannière du haut de fichier */
 }
 
 .banner-link {
@@ -497,15 +607,18 @@ img { max-width: 100%; display: block; }
     position: relative;
     width: 100%;
     overflow: hidden;
+    touch-action: pan-y;
 }
 
 .slides {
     display: flex;
     transition: transform 0.5s ease-in-out;
+    will-change: transform;
 }
 
 .slide {
     min-width: 100%;
+    flex-shrink: 0;
 }
 
 .slide img {
@@ -521,6 +634,7 @@ img { max-width: 100%; display: block; }
     transform: translateX(-50%);
     display: flex;
     gap: 8px;
+    z-index: 2;
 }
 
 .dot {
@@ -528,6 +642,8 @@ img { max-width: 100%; display: block; }
     height: 10px;
     background: rgba(255, 255, 255, 0.5);
     border-radius: 50%;
+    border: 0;
+    padding: 0;
 }
 
 .dot.active {
@@ -542,6 +658,8 @@ img { max-width: 100%; display: block; }
     padding: 15px 20px;
     border-top: 1px solid #f0f0f0;
     width: 100%;
+    position: relative;
+    z-index: 10;
 }
 
 /* Classe activée par le clic sur la loupe */
@@ -557,6 +675,11 @@ img { max-width: 100%; display: block; }
     border-radius: 8px;
     padding: 5px 15px;
     border: 1px solid #e0e0e0;
+}
+
+.mobile-search-bar form:focus-within {
+    border-color: #bdbdbd;
+    background: #ffffff;
 }
 
 .mobile-search-bar input {
@@ -575,6 +698,13 @@ img { max-width: 100%; display: block; }
     color: #1a1a1a;
     font-size: 16px;
     cursor: pointer;
+    padding: 6px;
+}
+
+.mobile-search-bar button:focus-visible {
+    outline: 2px solid #ffcc00;
+    outline-offset: 2px;
+    border-radius: 6px;
 }
 
 @keyframes fadeInDown {
@@ -585,6 +715,12 @@ img { max-width: 100%; display: block; }
 /* Masquer sur PC pour ne pas casser votre design actuel */
 @media (min-width: 769px) {
     .mobile-search-bar { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-search-bar.active {
+        animation: none;
+    }
 }
 /* =========================================
     4. MENU & INTERFACES MOBILES
@@ -609,7 +745,7 @@ img { max-width: 100%; display: block; }
     .header-main-layout { padding: 5px 0; margin-bottom: 0; }
 
     /* --- ACCORDÉON MOBILE --- */
- .mobile-drawer li {
+    .mobile-drawer li {
         position: relative;
     }
     .submenu-mobile {
@@ -694,15 +830,12 @@ img { max-width: 100%; display: block; }
     height: 100vh;
     background-color: #000;
     z-index: 10000;
-    transition: all 0.3s ease; /* Animation fluide */
+    transition: left 0.3s ease, opacity 0.3s ease; /* Animation fluide */
     
     /* On utilise l'opacité au lieu de visibility pour éviter les bugs de clic */
     opacity: 0; 
     pointer-events: none; 
     overflow-y: auto; /* Permet de défiler à l'intérieur du menu s'il est long */
-}
-.mobile-drawer {
-    /* ... vos autres codes ... */
     padding-bottom: 60px !important; /* Ajoute un espace vide tout en bas du scroll */
     display: flex;
     flex-direction: column;
@@ -715,20 +848,13 @@ img { max-width: 100%; display: block; }
     left: 0; 
     opacity: 1;
     pointer-events: auto; /* Réactive les clics sur les liens E-LIQUIDES, etc. */
+    visibility: visible;
 }
 
 /* --- OPTIONNEL : Empêcher le scroll du site derrière quand le menu est ouvert --- */
 /* Si vous ajoutez la classe 'no-scroll' au body via JS */
 body.no-scroll {
     overflow: hidden;
-}
-
-/* --- État du menu quand il est OUVERT --- */
-/* Cette classe sera ajoutée via votre bouton menu (le burger) */
-.mobile-drawer.open {
-    left: 0; /* Il revient à sa place et remplit l'écran */
-    pointer-events: auto;
-    visibility: visible;
 }
 
 .mobile-drawer::-webkit-scrollbar {
@@ -738,8 +864,6 @@ body.no-scroll {
     background: #444;
     border-radius: 10px;
 }
-
-.mobile-drawer.active { left: 0; }
 
 .drawer-header {
     display: flex;
@@ -792,6 +916,17 @@ body.no-scroll {
     border-radius: 5px;
     margin-top: 20px;
     font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-main:hover {
+    background: #1f7fb8;
+    transform: translateY(-1px);
+}
+
+.btn-main:focus-visible {
+    outline: 2px solid #ffcc00;
+    outline-offset: 2px;
 }
 /* 1. On s'assure que le parent est la référence */
 .contact-wrapper {
@@ -817,6 +952,7 @@ body.no-scroll {
     
     /* Alignement des icônes à l'intérieur */
     min-width: 140px;
+    max-width: calc(100vw - 24px);
 }
 
 /* 3. On aligne les logos horizontalement */
@@ -833,9 +969,22 @@ body.no-scroll {
     display: block;
 }
 
+.contact-icons a:focus-visible {
+    outline: 2px solid #ffcc00;
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
 /* 4. Classe activée par le clic JS */
 .contact-bubble.active {
     display: block;
+}
+
+@media (max-width: 768px) {
+    .contact-bubble {
+        left: auto;
+        right: 0;
+    }
 }
 /* =========================================
    MOBILE CONTACT SECTION : RECTIFICATION (Version Finale)
@@ -857,13 +1006,16 @@ body.no-scroll {
 }
 
 /* Conteneur pour CHAQUE ligne de contact (Icône + Texte) */
-.mobile-contact-item {
+.mobile-drawer .mobile-contact-item {
     display: flex; /* Force l'alignement horizontal */
+    justify-content: flex-start; /* Empêche l'écartement icône / texte */
     align-items: center; /* Centre verticalement l'icône et le texte sur la même ligne */
     gap: 15px; /* Espace horizontal entre l'icône et le texte */
+    padding: 10px 0; /* Évite le padding générique du menu qui casse l'alignement */
     text-decoration: none; /* Enlève le soulignement des liens */
     color: #fff; /* Correction de la couleur : Texte de l'adresse en Blanc */
-    margin-bottom: 18px; /* Espace entre les différentes lignes de contact */
+    font-weight: 500; /* Plus lisible sans être aussi lourd que le menu principal */
+    margin-bottom: 8px; /* Espace entre les différentes lignes de contact */
 }
 
 /* Force la taille des logos à être petite */
@@ -923,44 +1075,17 @@ body.no-scroll {
     background-color: #e0e0e0;
     transform: scale(0.98);
 }
-/* --- RÉGLAGES PAR DÉFAUT (PC) --- */
-
-/* On affiche la bannière PC */
-.banner-desktop {
-    display: block;
+/* --- NORMALISATION BANNIÈRES (sans dupliquer la logique d'affichage) --- */
+.banner-desktop,
+.banner-mobile {
     width: 100%;
 }
 
-.banner-desktop img {
+.banner-desktop img,
+.banner-mobile img {
     width: 100%;
     height: auto;
     display: block;
-}
-
-/* On cache la bannière Mobile sur PC */
-.banner-mobile {
-    display: none;
-}
-
-/* --- RÉGLAGES POUR MOBILE (Écrans de moins de 768px) --- */
-@media screen and (max-width: 768px) {
-    
-    /* On cache manuellement la bannière PC */
-    .banner-desktop {
-        display: none !important;
-    }
-    
-    /* On affiche manuellement la bannière Mobile */
-    .banner-mobile {
-        display: block !important;
-        width: 100%;
-    }
-    
-    .banner-mobile img {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
 }
 .promo-bar-container {
     background-color: #000;
@@ -976,26 +1101,41 @@ body.no-scroll {
     position: relative;
 }
 
+/* --- TEXTE ANIMÉ DANS LA BARRE PROMO --- */
 .promo-bar-content {
     font-weight: 900;
-    font-size: 14px;
+    font-size: clamp(10px, 2.8vw, 14px);
     white-space: nowrap;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    position: absolute;
-    /* On lance l'animation combinée */
-    animation: promo-sequence 10s infinite linear;
-}
-
-/* --- LA SÉQUENCE D'ANIMATION --- */
-.promo-bar-content {
-    font-weight: 900;
-    font-size: 14px;
-    white-space: nowrap;
-    text-transform: uppercase;
+    letter-spacing: clamp(0px, 0.2vw, 1px);
+    line-height: 1.2;
+    max-width: calc(100% - 20px);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
     position: absolute;
     /* Durée totale augmentée pour inclure la pause de 5s */
     animation: promo-bigmonkey 12s infinite ease-in-out;
+}
+
+@media (min-width: 769px) {
+    .promo-bar-container {
+        height: 52px;
+    }
+
+    .promo-bar-content {
+        font-size: clamp(16px, 1.4vw, 24px);
+        letter-spacing: clamp(0.5px, 0.12vw, 1.8px);
+        max-width: calc(100% - 40px);
+    }
+}
+
+@media (max-width: 480px) {
+    .promo-bar-content {
+        font-size: clamp(9px, 2.6vw, 11px);
+        letter-spacing: 0;
+        max-width: calc(100% - 12px);
+    }
 }
 
 @keyframes promo-bigmonkey {
@@ -1020,6 +1160,14 @@ body.no-scroll {
 
     /* 100% : Préparation pour la reprise */
     100% { transform: translateY(-100%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .promo-bar-content {
+        animation: none;
+        transform: none;
+        opacity: 1;
+    }
 }
 /* =========================================
    NOUVELLE SECTION RASSURANCE (COMPACTE)
@@ -2052,31 +2200,55 @@ input[type="tel"] {
 .container-collection {
     display: flex;
     max-width: 1200px;
-    margin: 20px auto;
+    margin: 24px auto;
     padding: 0 15px;
+    gap: 30px;
 }
 
 /* --- BARRE LATÉRALE (Filtres PC) --- */
 .sidebar-filters {
     width: 250px;
-    padding-right: 30px;
-    border-right: 2px solid #333; /* Rendu plus sombre pour coller au thème */
+    padding-right: 26px;
+    border-right: 1px solid #d8dde3;
 }
 
 .filter-group ul {
     list-style: none; /* Supprime les puces par défaut */
     padding: 0;
-    margin: 10px 0 20px 0;
+    margin: 10px 0 24px 0;
 }
 
 .filter-group li {
-    margin-bottom: 8px;
-    color: #fff; /* Texte en blanc pour le thème sombre */
+    margin-bottom: 10px;
+    color: #2f3a4a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+.filter-group li input[type="checkbox"] {
+    accent-color: #ffcc00;
+    width: 16px;
+    height: 16px;
+}
+
+.filter-group li label {
+    color: #2f3a4a;
+    cursor: pointer;
+}
+
+.filter-group h3 {
+    color: #1f2937;
+    margin-bottom: 12px;
+    letter-spacing: 0.2px;
 }
 
 .filter-title {
     color: #ffcc00;
     margin-bottom: 20px;
+    font-size: 2rem;
+    letter-spacing: 0.3px;
 }
 
 .btn-apply-filters {
@@ -2084,84 +2256,90 @@ input[type="tel"] {
     background: #ffcc00;
     color: #000;
     border: none;
-    padding: 10px;
+    padding: 12px 10px;
     font-weight: bold;
     cursor: pointer;
-    border-radius: 4px;
-    transition: 0.3s;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .btn-apply-filters:hover {
-    background: #fff;
+    background: #ffd94d;
+    transform: translateY(-1px);
 }
 
 /* --- GRILLE DE PRODUITS --- */
 .products-grid-container {
     flex: 1;
-    padding-left: 30px;
+    padding-left: 0;
 }
 
 .collection-header h1 {
     color: #ffcc00;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    font-size: 2.1rem;
+    letter-spacing: 0.5px;
 }
 
 .collection-header p {
-    color: #aaa;
+    color: #7b8794;
     margin-bottom: 25px;
+    font-size: 1.2rem;
 }
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 22px;
 }
 
 /* --- CARTE PRODUIT (Style Urban/Street) --- */
 .product-card {
-    background: #1a1a1a; 
-    border: 1px solid #333;
-    padding: 15px;
+    background: #ffffff;
+    border: 1px solid #e4e8ee;
+    padding: 16px;
     text-align: center;
     position: relative;
-    transition: all 0.3s ease;
-    border-radius: 8px;
+    transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    border-radius: 12px;
     overflow: hidden;
 }
 
 .product-card:hover {
-    border-color: #ffcc00; 
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(255, 204, 0, 0.1); /* Ombre légèrement jaune */
+    border-color: #ffd54a;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
 }
 
 .product-card img {
     max-width: 100%;
     height: auto;
-    margin-bottom: 15px;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+    margin-bottom: 12px;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
 }
 
 .product-brand {
     color: #ffcc00;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: bold;
     text-transform: uppercase;
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
+    letter-spacing: 0.6px;
 }
 
 .product-name {
-    color: #fff;
-    font-size: 1.1rem;
+    color: #1f2937;
+    font-size: 1rem;
     margin-bottom: 10px;
-    height: 45px; 
+    min-height: 44px;
     overflow: hidden;
+    line-height: 1.35;
 }
 
 .product-price {
-    color: #fff;
-    font-size: 1.3rem;
+    color: #111827;
+    font-size: 1.15rem;
     font-weight: 800;
     margin-bottom: 15px;
 }
@@ -2173,19 +2351,20 @@ input[type="tel"] {
 
 .btn-view {
     display: block;
-    background: transparent;
+    background: #111;
     color: #fff;
-    border: 2px solid #fff;
+    border: 1px solid #111;
     padding: 8px 0;
     text-decoration: none;
     font-weight: bold;
-    transition: 0.3s;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     border-radius: 25px; 
 }
 
 .btn-view:hover {
-    background: #fff;
-    color: #000;
+    background: #ffcc00;
+    color: #111;
+    border-color: #ffcc00;
 }
 
 .badge-promo {
@@ -2207,6 +2386,7 @@ input[type="tel"] {
 @media (max-width: 768px) {
     .container-collection {
         flex-direction: column;
+        gap: 0;
     }
 
     .mobile-filter-trigger {
@@ -2251,7 +2431,16 @@ input[type="tel"] {
     }
     
     .products-grid-container {
-        padding-left: 0; 
+        padding-left: 0;
+        padding-top: 20px;
+    }
+
+    .collection-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .collection-header p {
+        font-size: 1.05rem;
     }
 }
 

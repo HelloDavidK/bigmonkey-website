@@ -2,7 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-require 'config.php';
+require_once 'config.php';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -34,19 +34,19 @@ require 'config.php';
             <div class="slides">
                 
                 <div class="slide">
-                    <a href="nouveautes.php" class="banner-link banner-desktop">
+                    <a href="collection.php" class="banner-link banner-desktop">
                         <img src="img/slider1-pc.jpg" alt="Nouveautés E-liquides">
                     </a>
-                    <a href="nouveautes.php" class="banner-link banner-mobile">
+                    <a href="collection.php" class="banner-link banner-mobile">
                         <img src="img/slider1-mobile.jpg" alt="Nouveautés E-liquides Mobile">
                     </a>
                 </div>
 
                 <div class="slide">
-                    <a href="bons-plans.php" class="banner-link banner-desktop">
+                    <a href="collection.php" class="banner-link banner-desktop">
                         <img src="img/slider2-pc.jpg" alt="Promotions Matériel">
                     </a>
-                    <a href="bons-plans.php" class="banner-link banner-mobile">
+                    <a href="collection.php" class="banner-link banner-mobile">
                         <img src="img/slider2-mobile.jpg" alt="Promotions Matériel Mobile">
                     </a>
                 </div>
@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <button class="slider-arrow next" onclick="moveSlide(1)">&#10095;</button>
     </div>
 </section>
-</section></section>
 <section class="promotions-section">
     <div class="container">
         <div class="section-header">
@@ -137,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="promo-info">
                     <h4>PACK STARTER JUST</h4>
                     <p class="price"><span class="old-price">137.500 Ar</span> <span class="promo-val">100.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Voir l'offre</a>
+                    <a href="collection.php" class="btn-promo">Voir l'offre</a>
                 </div>
             </div>
 
@@ -149,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="promo-info">
                     <h4>SMART PACK JUST 10 ML</h4>
                     <p class="price"><span class="old-price">87.500 Ar</span> <span class="promo-val">55.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Voir l'offre</a>
+                    <a href="collection.php" class="btn-promo">Voir l'offre</a>
                 </div>
             </div>
 
@@ -161,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="promo-info">
                     <h4>WONDERFUL TART - FRAMBOISE</h4>
                     <p class="price"><span class="old-price">45.000 Ar</span> <span class="promo-val">35.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Voir l'offre</a>
+                    <a href="collection.php" class="btn-promo">Voir l'offre</a>
                 </div>
             </div>
 
@@ -173,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="promo-info">
                     <h4>KIT POD VPRIME 2600MAH - OXVA</h4>
                     <p class="price"><span class="old-price">175.000 Ar</span> <span class="promo-val">150.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Voir l'offre</a>
+                    <a href="collection.php" class="btn-promo">Voir l'offre</a>
                 </div>
             </div>
         </div>
@@ -212,7 +211,7 @@ document.addEventListener("DOMContentLoaded", function() {
     <h2 class="section-title">NOS UNIVERS VAPE</h2>
     
     <div class="cat-grid">
-        <a href="/e-liquides" class="cat-card">
+        <a href="collection.php" class="cat-card">
             <div class="cat-image-wrapper">
                 <img src="img/cat-eliquide.jpg" alt="E-liquides certifiés France - Big Monkey">
             </div>
@@ -222,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function() {
             </div>
         </a>
 
-        <a href="/diy" class="cat-card">
+        <a href="collection.php" class="cat-card">
             <div class="cat-image-wrapper">
                 <img src="img/cat-diy.jpg" alt="Arômes et Bases DIY Madagascar">
             </div>
@@ -232,7 +231,7 @@ document.addEventListener("DOMContentLoaded", function() {
             </div>
         </a>
 
-        <a href="/e-cigarettes" class="cat-card">
+        <a href="collection.php" class="cat-card">
             <div class="cat-image-wrapper">
                 <img src="img/cat-materiel.jpg" alt="Cigarettes électroniques et Pods Antananarivo">
             </div>
@@ -366,10 +365,7 @@ document.addEventListener("DOMContentLoaded", function() {
         <button class="add-to-cart">AJOUTER AU PANIER</button>
     </div>
 </div>
-    </div> </section>
-</div>
-</div>
-        </div>
+    </div>
 </section>
 <section class="section-esprit-monkey">
     <div class="mission-white-box">
@@ -414,7 +410,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="promo-info">
                     <h4>STARTER KIT PRO 20MG - IVAPEGREAT</h4>
                     <p class="price"><span class="promo-val">100.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Découvrir</a>
+                    <a href="collection.php" class="btn-promo">Découvrir</a>
                 </div>
             </div>
 
@@ -425,7 +421,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="promo-info">
                     <h4>MT-10K 2% 10ML - TESLA BAR BY TESLACIGS</h4>
                     <p class="price"><span class="promo-val">55.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Découvrir</a>
+                    <a href="collection.php" class="btn-promo">Découvrir</a>
                 </div>
             </div>
 
@@ -436,7 +432,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="promo-info">
                     <h4>KIT FIGHTER-X 32K-MINASAWA</h4>
                     <p class="price"><span class="promo-val">60.000</span></p>
-                    <a href="#" class="btn-promo">Découvrir</a>
+                    <a href="collection.php" class="btn-promo">Découvrir</a>
                 </div>
             </div>
 
@@ -447,7 +443,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="promo-info">
                     <h4>STARTER KIT POD FLIP PULP 2ML</h4>
                     <p class="price"><span class="promo-val">150.000 Ar</span></p>
-                    <a href="#" class="btn-promo">Découvrir</a>
+                    <a href="collection.php" class="btn-promo">Découvrir</a>
                 </div>
             </div>
         </div>
@@ -469,7 +465,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="blog-tag">Innovation</span>
                     <h3>Puff 32.000 bouffées : Le test complet</h3>
                     <p>On a testé la Fighter X de Maison Fuel. Est-ce vraiment rentable ?</p>
-                    <a href="#" class="blog-link">Lire la suite</a>
+                    <a href="index.php" class="blog-link">Lire la suite</a>
                 </div>
             </div>
 
@@ -481,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="blog-tag">Conseils</span>
                     <h3>Comment entretenir son Kit VPrime ?</h3>
                     <p>4 astuces simples pour prolonger la durée de vie de votre batterie OXVA.</p>
-                    <a href="#" class="blog-link">Lire la suite</a>
+                    <a href="index.php" class="blog-link">Lire la suite</a>
                 </div>
             </div>
 
@@ -493,74 +489,22 @@ document.addEventListener("DOMContentLoaded", function() {
                     <span class="blog-tag">Saveurs</span>
                     <h3>Top 5 des e-liquides "Just" cet été</h3>
                     <p>Du Citron au Café-Biscuit, découvrez les favoris de nos clients.</p>
-                    <a href="#" class="blog-link">Lire la suite</a>
+                    <a href="index.php" class="blog-link">Lire la suite</a>
                 </div>
             </div>
         </div>
         <div class="blog-footer">
-            <a href="votre-page-blog.html" class="btn-load-more">Voir toute l'actualité</a>
+            <a href="index.php" class="btn-load-more">Voir toute l'actualité</a>
         </div>
     </div>
 </section>
 </main>
-<footer class="main-footer">
-    <div class="container">
-        <div class="footer-grid">
-            
-            <div class="footer-col branding">
-                <h2 class="footer-logo">BIG <span>MONKEY</span></h2>
-                <p class="footer-description">
-                    Le spécialiste de la vape à Madagascar. 
-                    Retrouvez les meilleures puffs, e-liquides et kits avec une livraison rapide sur Antananarivo et provinces.
-                </p>
-            </div>
-
-            <div class="footer-col">
-                <h4>Navigation</h4>
-                <ul>
-                    <li><a href="#">Accueil</a></li>
-                    <li><a href="#">E-liquides</a></li>
-                    <li><a href="#">Puffs & Pods</a></li>
-                    <li><a href="#">Le Blog</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-col">
-                <h4>Aide & Conseils</h4>
-                <ul>
-                    <li><a href="#">Guide Nicotine</a></li>
-                    <li><a href="#">Entretien matériel</a></li>
-                    <li><a href="#">Livraison & Frais</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-col contact-col">
-                <h4>Contact</h4>
-                <div class="contact-info">
-                    <p><i class="fas fa-map-marker-alt"></i> Antananarivo, Madagascar</p>
-                    <p><i class="fas fa-phone"></i> +261 3x xx xx xx</p>
-                    <p><i class="fas fa-envelope"></i> contact@pav-mdg.com</p>
-                </div>
-                
-                <div class="social-links">
-                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2026 BIG MONKEY - Tous droits réservés. Interdit aux mineurs (-18).</p>
-        </div>
-    </div>
-</footer>
-    <script src="js/script.js"></script>
+<?php include 'footer.php'; ?>
 <script>
     const nomSauvegarde = localStorage.getItem('clientNom');
-    if (nomSauvegarde) {
-        document.querySelector('.top-bar-right a').innerHTML = `<i class="fas fa-user"></i> ${nomSauvegarde}`;
+    const topBarAuthLink = document.querySelector('.top-bar-right a');
+    if (nomSauvegarde && topBarAuthLink) {
+        topBarAuthLink.innerHTML = `<i class="fas fa-user"></i> ${nomSauvegarde}`;
     }
 </script>
 </body>

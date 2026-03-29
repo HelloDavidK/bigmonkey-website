@@ -1,12 +1,19 @@
 <?php
+declare(strict_types=1);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require 'config.php';
+require_once 'config.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+        echo "Session expirée, merci de recharger la page.";
+        exit;
+    }
+
     $pseudo   = trim($_POST['pseudo'] ?? ''); 
     $email    = trim($_POST['email'] ?? '');
     $tel      = trim($_POST['phone'] ?? '');
@@ -27,8 +34,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
         $check->execute([$email]);
-        
-        if ($check->rowCount() > 0) {
+        $existingUser = $check->fetch();
+
+        if ($existingUser) {
             echo "Cet email est déjà utilisé par un autre compte.";
             exit;
         }
@@ -52,6 +60,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo "success"; 
             exit;
         }
+
+        echo "Impossible de finaliser l'inscription pour le moment.";
+        exit;
     } catch (PDOException $e) {
         error_log("Erreur Inscription : " . $e->getMessage());
         echo "Une erreur technique est survenue.";
