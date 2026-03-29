@@ -2,10 +2,8 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
-require 'config.php';
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+require_once 'config.php';
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     
     $pseudo   = trim($_POST['pseudo'] ?? ''); 
     $email    = trim($_POST['email'] ?? '');
@@ -27,8 +25,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
         $check->execute([$email]);
-        
-        if ($check->rowCount() > 0) {
+        $existingUser = $check->fetch();
+
+        if ($existingUser) {
             echo "Cet email est déjà utilisé par un autre compte.";
             exit;
         }
@@ -48,13 +47,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['id']      = $new_user_id; // Double sécurité pour certains scripts
             $_SESSION['pseudo']  = $pseudo;      // Nom d'affichage
             $_SESSION['email']   = $email;       // Email pour le profil
-
-            echo "success"; 
+echo "success"; 
             exit;
         }
+
+        echo "Impossible de finaliser l'inscription pour le moment.";
+        exit;
     } catch (PDOException $e) {
         error_log("Erreur Inscription : " . $e->getMessage());
         echo "Une erreur technique est survenue.";
         exit;
     }
-}
+    }
