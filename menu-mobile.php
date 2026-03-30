@@ -3,68 +3,68 @@
         <span>MENU</span>
         <span class="close-drawer">&times;</span>
     </div>
-    
+
     <ul>
         <li>
             <div class="mobile-menu-item">
-                <a href="collection.php">E-LIQUIDES</a>
+                <a href="collection.php?cat=eliquides">E-LIQUIDES</a>
                 <span class="toggle-submenu">+</span>
             </div>
             <ul class="submenu-mobile">
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Par marques</a>
+                        <a href="collection.php?cat=eliquides">Par marques</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Aromazon</a></li>
-                        <li><a href="collection.php">Arômes & Liquides</a></li>
-                        <li><a href="collection.php">Avap</a></li>
-                        <li><a href="collection.php">Ben Northon</a></li>
-                        <li><a href="collection.php">D'Lice</a></li>
-                        <li><a href="collection.php">Eliquid France</a></li>
-                        <li><a href="collection.php">E.Tasty</a></li>
-                        <li><a href="collection.php">Fcukin'Flava</a></li>
-                        <li><a href="collection.php">Kyandi Shop</a></li>
-                        <li><a href="collection.php">La Fabrique Française</a></li>
-                        <li><a href="collection.php">Le Coq qui vape</a></li>
-                        <li><a href="collection.php">Le French Liquide</a></li>
-                        <li><a href="collection.php">Liquid Arom</a></li>
-                        <li><a href="collection.php">Liquideo</a></li>
-                        <li><a href="collection.php">Maison Fuel</a></li>
-                        <li><a href="collection.php">Medusa Juice</a></li>
-                        <li><a href="collection.php">Mon chou choux</a></li>
-                        <li><a href="collection.php">Secret's Lab</a></li>
-                        <li><a href="collection.php">Swoke</a></li>
-                        <li><a href="collection.php">T-Juice</a></li>
-                        <li><a href="collection.php">Vampire Vape</a></li>
-                        <li><a href="collection.php">Vape Maker</a></li>
-                        <li><a href="collection.php">X-Bar</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Aromazon">Aromazon</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Ar%C3%B4mes%20%26%20Liquides">Arômes & Liquides</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Avap">Avap</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Ben%20Northon">Ben Northon</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=D%27Lice">D'Lice</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Eliquid%20France">Eliquid France</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=E.Tasty">E.Tasty</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Fcukin%27Flava">Fcukin'Flava</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Kyandi%20Shop">Kyandi Shop</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=La%20Fabrique%20Fran%C3%A7aise">La Fabrique Française</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Le%20Coq%20qui%20vape">Le Coq qui vape</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Le%20French%20Liquide">Le French Liquide</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Liquid%20Arom">Liquid Arom</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Liquideo">Liquideo</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Maison%20Fuel">Maison Fuel</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Medusa%20Juice">Medusa Juice</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Mon%20chou%20choux">Mon chou choux</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Secret%27s%20Lab">Secret's Lab</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Swoke">Swoke</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=T-Juice">T-Juice</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Vampire%20Vape">Vampire Vape</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=Vape%20Maker">Vape Maker</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;brand[]=X-Bar">X-Bar</a></li>
                     </ul>
                 </li>
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Par contenances</a>
+                        <a href="collection.php?cat=eliquides">Par contenances</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">10 ML</a></li>
-                        <li><a href="collection.php">50 ML</a></li>
-                        <li><a href="collection.php">100 ML</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;contenance[]=10">10 ML</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;contenance[]=50">50 ML</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;contenance[]=100">100 ML</a></li>
                     </ul>
                 </li>
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Par saveurs</a>
+                        <a href="collection.php?cat=eliquides">Par saveurs</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Classic</a></li>
-                        <li><a href="collection.php">Gourmand</a></li>
-                        <li><a href="collection.php">Fruité</a></li>
-                        <li><a href="collection.php">Fruité Frais</a></li>
-                        <li><a href="collection.php">Mentholé</a></li>
-                        <li><a href="collection.php">Boisson</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Classic">Classic</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Gourmand">Gourmand</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Fruité">Fruité</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Fruité%20Frais">Fruité Frais</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Mentholé">Mentholé</a></li>
+                        <li><a href="collection.php?cat=eliquides&amp;saveur[]=Boisson">Boisson</a></li>
                     </ul>
                 </li>
             </ul>
@@ -72,32 +72,32 @@
 
         <li>
             <div class="mobile-menu-item">
-                <a href="collection.php">DIY</a>
+                <a href="collection.php?cat=diy">DIY</a>
                 <span class="toggle-submenu">+</span>
             </div>
             <ul class="submenu-mobile">
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Accessoires DIY</a>
+                        <a href="collection.php?cat=diy">Accessoires DIY</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Concentrés</a></li>
-                        <li><a href="collection.php">Matériels DIY</a></li>
-                        <li><a href="collection.php">Additifs</a></li>
-                        <li><a href="collection.php">Bases</a></li>
-                        <li><a href="collection.php">Boosters</a></li>
+                        <li><a href="collection.php?cat=diy&amp;q=concentr%C3%A9">Concentrés</a></li>
+                        <li><a href="collection.php?cat=diy&amp;q=mat%C3%A9riel">Matériels DIY</a></li>
+                        <li><a href="collection.php?cat=diy&amp;q=additif">Additifs</a></li>
+                        <li><a href="collection.php?cat=diy&amp;q=base">Bases</a></li>
+                        <li><a href="collection.php?cat=diy&amp;q=booster">Boosters</a></li>
                     </ul>
                 </li>
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Nos e-liquides DIY</a>
+                        <a href="collection.php?cat=diy">Nos e-liquides DIY</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">10 ML</a></li>
-                        <li><a href="collection.php">30 ML</a></li>
-                        <li><a href="collection.php">50 ML</a></li>
+                        <li><a href="collection.php?cat=diy&amp;contenance[]=10">10 ML</a></li>
+                        <li><a href="collection.php?cat=diy&amp;contenance[]=30">30 ML</a></li>
+                        <li><a href="collection.php?cat=diy&amp;contenance[]=50">50 ML</a></li>
                     </ul>
                 </li>
             </ul>
@@ -105,47 +105,47 @@
 
         <li>
             <div class="mobile-menu-item">
-                <a href="collection.php">E-CIGARETTES</a>
+                <a href="collection.php?cat=ecigarettes">E-CIGARETTES</a>
                 <span class="toggle-submenu">+</span>
             </div>
             <ul class="submenu-mobile">
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Kits & Batterie</a>
+                        <a href="collection.php?cat=ecigarettes">Kits & Batterie</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Kits complets</a></li>
-                        <li><a href="collection.php">Pods</a></li>
-                        <li><a href="collection.php">Box & Batteries</a></li>
-                        <li><a href="collection.php">Puffs</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=kit">Kits complets</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=pod">Pods</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=box">Box & Batteries</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=puff">Puffs</a></li>
                     </ul>
                 </li>
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Clearos & Atos</a>
+                        <a href="collection.php?cat=ecigarettes">Clearos & Atos</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Clearos</a></li>
-                        <li><a href="collection.php">Atos</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=clearo">Clearos</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=ato">Atos</a></li>
                     </ul>
                 </li>
                 <li>
                     <div class="mobile-menu-item nested">
-                        <a href="collection.php">Cartouches & Résistances</a>
+                        <a href="collection.php?cat=ecigarettes">Cartouches & Résistances</a>
                         <span class="toggle-submenu">+</span>
                     </div>
                     <ul class="submenu-mobile">
-                        <li><a href="collection.php">Cartouches</a></li>
-                        <li><a href="collection.php">Résistances</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=cartouche">Cartouches</a></li>
+                        <li><a href="collection.php?cat=ecigarettes&amp;q=r%C3%A9sistance">Résistances</a></li>
                     </ul>
                 </li>
             </ul>
         </li>
 
-        <li><a href="collection.php"><span>NOUVEAUTÉS</span></a></li>
-        <li class="promo-mob"><a href="collection.php"><span>BONS PLANS</span></a></li>
+        <li><a href="collection.php?cat=nouveautes"><span>NOUVEAUTÉS</span></a></li>
+        <li class="promo-mob"><a href="collection.php?cat=bons-plans"><span>BONS PLANS</span></a></li>
 
         <li class="mobile-contact-section">
             <h3>Nous contacter</h3>
