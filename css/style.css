@@ -2226,6 +2226,7 @@ input[type="tel"] {
     padding-right: 22px;
     border-right: 1px solid #d8dde3;
 }
+
 .filter-group ul {
     list-style: none; /* Supprime les puces par défaut */
     padding: 0;
@@ -2301,14 +2302,14 @@ input[type="tel"] {
     font-size: 1.2rem;
 }
 
-.products-grid {␊
-    display: grid;␊
+.products-grid {
+    display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 22px;␊
-}␊
+    gap: 22px;
+}
 
 /* --- CARTE PRODUIT (Style Urban/Street) --- */
-.product-card {
+.products-grid .product-card {
     background: #ffffff;
     border: 1px solid #e4e8ee;
     padding: 16px;
@@ -2317,21 +2318,24 @@ input[type="tel"] {
     transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
     border-radius: 12px;
     overflow: hidden;
+    display: block;
 }
 
-.product-card:hover {
+.products-grid .product-card:hover {
     border-color: #ffd54a;
     transform: translateY(-4px);
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
 }
-.product-card img {
-    width: 100%;
+
+.products-grid .product-card img {
+    width: 100% !important;
     max-width: 100%;
-    height: 180px;
+    height: 180px !important;
     object-fit: contain;
     margin-bottom: 12px;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
 }
+
 .product-brand {
     color: #ffcc00;
     font-size: 0.75rem;
@@ -2341,9 +2345,10 @@ input[type="tel"] {
     margin-bottom: 6px;
     letter-spacing: 0.6px;
 }
-.product-name {
+
+.products-grid .product-name {
     color: #1f2937;
-    font-size: 1rem;
+    font-size: 1rem !important;
     margin-bottom: 10px;
     min-height: 52px;
     overflow: hidden;
@@ -2353,6 +2358,7 @@ input[type="tel"] {
     -webkit-box-orient: vertical;
     word-break: break-word;
 }
+
 .product-price {
     color: #111827;
     font-size: 1.15rem;
@@ -2383,7 +2389,7 @@ input[type="tel"] {
     border-color: #ffcc00;
 }
 
-.badge-promo {␊
+.badge-promo {
     position: absolute;
     top: 10px;
     left: 10px;
@@ -2394,7 +2400,6 @@ input[type="tel"] {
     font-weight: bold;
     border-radius: 3px;
     z-index: 10;
-}
 }
 
 .collection-pagination {
@@ -2480,6 +2485,7 @@ input[type="tel"] {
         border-bottom: 2px solid #333;
         padding-bottom: 10px;
     }
+
     .products-grid-container {
         padding-left: 0;
         padding-top: 20px;
@@ -2490,12 +2496,12 @@ input[type="tel"] {
         gap: 14px;
     }
 
-    .product-card {
+    .products-grid .product-card {
         padding: 12px;
     }
 
-    .product-card img {
-        height: 145px;
+    .products-grid .product-card img {
+        height: 145px !important;
     }
 
     .collection-header h1 {
