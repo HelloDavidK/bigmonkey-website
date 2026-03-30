@@ -1452,7 +1452,6 @@ body.no-scroll {
     max-width: 1200px;
     margin: 0 auto;
 }
-
 /* --- CARTE PRODUIT AMÉLIORÉE --- */
 .product-card {
     border: 1px solid #eeeeee;
@@ -1539,14 +1538,10 @@ body.no-scroll {
         font-size: 18px !important;
     }
 }
-/* 1. On cache toutes les cartes produits par défaut */
-.product-card {
-    display: none;
-}
 
-/* 2. On affiche uniquement ceux de la catégorie e-liquides au chargement */
-.product-card[data-category="e-liquides"] {
-    display: flex; /* On utilise flex pour respecter votre structure interne */
+/* Affichage normal des cartes produit (désactive l'ancien masquage global) */
+.product-card {
+    display: flex;
 }
 /* --- SECTION 1 : FOND GRAFFITI UNIQUEMENT ICI --- */
 .section-esprit-monkey {
@@ -2219,31 +2214,55 @@ input[type="tel"] {
 .container-collection {
     display: flex;
     max-width: 1200px;
-    margin: 20px auto;
+    margin: 24px auto;
     padding: 0 15px;
+    gap: 30px;
 }
 
 /* --- BARRE LATÉRALE (Filtres PC) --- */
 .sidebar-filters {
     width: 250px;
-    padding-right: 30px;
-    border-right: 2px solid #333; /* Rendu plus sombre pour coller au thème */
+    padding-right: 26px;
+    border-right: 1px solid #d8dde3;
 }
 
 .filter-group ul {
     list-style: none; /* Supprime les puces par défaut */
     padding: 0;
-    margin: 10px 0 20px 0;
+    margin: 10px 0 24px 0;
 }
 
 .filter-group li {
-    margin-bottom: 8px;
-    color: #fff; /* Texte en blanc pour le thème sombre */
+    margin-bottom: 10px;
+    color: #2f3a4a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+.filter-group li input[type="checkbox"] {
+    accent-color: #ffcc00;
+    width: 16px;
+    height: 16px;
+}
+
+.filter-group li label {
+    color: #2f3a4a;
+    cursor: pointer;
+}
+
+.filter-group h3 {
+    color: #1f2937;
+    margin-bottom: 12px;
+    letter-spacing: 0.2px;
 }
 
 .filter-title {
     color: #ffcc00;
     margin-bottom: 20px;
+    font-size: 2rem;
+    letter-spacing: 0.3px;
 }
 
 .btn-apply-filters {
@@ -2251,84 +2270,90 @@ input[type="tel"] {
     background: #ffcc00;
     color: #000;
     border: none;
-    padding: 10px;
+    padding: 12px 10px;
     font-weight: bold;
     cursor: pointer;
-    border-radius: 4px;
-    transition: 0.3s;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .btn-apply-filters:hover {
-    background: #fff;
+    background: #ffd94d;
+    transform: translateY(-1px);
 }
 
 /* --- GRILLE DE PRODUITS --- */
 .products-grid-container {
     flex: 1;
-    padding-left: 30px;
+    padding-left: 0;
 }
 
 .collection-header h1 {
     color: #ffcc00;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    font-size: 2.1rem;
+    letter-spacing: 0.5px;
 }
 
 .collection-header p {
-    color: #aaa;
+    color: #7b8794;
     margin-bottom: 25px;
+    font-size: 1.2rem;
 }
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 22px;
 }
 
 /* --- CARTE PRODUIT (Style Urban/Street) --- */
 .product-card {
-    background: #ffffff; 
-    border: 1px solid #333;
-    padding: 5px;
+    background: #ffffff;
+    border: 1px solid #e4e8ee;
+    padding: 16px;
     text-align: center;
     position: relative;
-    transition: all 0.3s ease;
-    border-radius: 8px;
+    transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    border-radius: 12px;
     overflow: hidden;
 }
 
 .product-card:hover {
-    border-color: #ffcc00; 
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0); /* Ombre légèrement jaune */
+    border-color: #ffd54a;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
 }
 
 .product-card img {
     max-width: 100%;
     height: auto;
-    margin-bottom: 10px;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.0));
+    margin-bottom: 12px;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.12));
 }
 
 .product-brand {
     color: #ffcc00;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: bold;
     text-transform: uppercase;
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
+    letter-spacing: 0.6px;
 }
 
 .product-name {
-    color: #fff;
-    font-size: 1.1rem;
+    color: #1f2937;
+    font-size: 1rem;
     margin-bottom: 10px;
-    height: 45px; 
+    min-height: 44px;
     overflow: hidden;
+    line-height: 1.35;
 }
 
 .product-price {
-    color: #fff;
-    font-size: 1.3rem;
+    color: #111827;
+    font-size: 1.15rem;
     font-weight: 800;
     margin-bottom: 15px;
 }
@@ -2340,19 +2365,20 @@ input[type="tel"] {
 
 .btn-view {
     display: block;
-    background: transparent;
+    background: #111;
     color: #fff;
-    border: 2px solid #fff;
+    border: 1px solid #111;
     padding: 8px 0;
     text-decoration: none;
     font-weight: bold;
-    transition: 0.3s;
-    border-radius: 25px; 
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    border-radius: 25px;
 }
 
 .btn-view:hover {
-    background: #fff;
-    color: #000;
+    background: #ffcc00;
+    color: #111;
+    border-color: #ffcc00;
 }
 
 .badge-promo {
@@ -2374,6 +2400,7 @@ input[type="tel"] {
 @media (max-width: 768px) {
     .container-collection {
         flex-direction: column;
+        gap: 0;
     }
 
     .mobile-filter-trigger {
@@ -2392,11 +2419,11 @@ input[type="tel"] {
     .sidebar-filters {
         position: fixed;
         top: 0;
-        left: -100%; 
+        left: -100%;
         width: 80%;
         height: 100%;
         background: #111; /* Fond sombre pour le tiroir mobile */
-        z-index: 20000; 
+        z-index: 20000;
         transition: 0.3s;
         padding: 20px;
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
@@ -2416,14 +2443,23 @@ input[type="tel"] {
         border-bottom: 2px solid #333;
         padding-bottom: 10px;
     }
-    
+
     .products-grid-container {
-        padding-left: 0; 
+        padding-left: 0;
+        padding-top: 20px;
+    }
+
+    .collection-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .collection-header p {
+        font-size: 1.05rem;
     }
 }
 
 @media (min-width: 769px) {
-    .mobile-filter-trigger, .filter-header-mobile { 
-        display: none; 
+    .mobile-filter-trigger, .filter-header-mobile {
+        display: none;
     }
 }
