@@ -9,8 +9,35 @@ require_once 'config.php';
 
 $rawCategory = isset($_GET['cat']) ? (string) $_GET['cat'] : 'tous';
 $category = preg_match('/^[a-zA-Z0-9_-]{1,50}$/', $rawCategory) ? $rawCategory : 'tous';
-$selectedBrands = array_values(array_filter((array) ($_GET['brand'] ?? []), 'is_string'));
-$searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
+$selectedBrands = array_values(array_filter((array) ($_GET['brand'] ?? []), static function ($value): bool {
+    return is_string($value) && trim($value) !== '';
+}));
+$searchQuery = isset($_GET['q']) ? trim((string) $searchQuery = $_GET['q']) : '';
+$currentPage = max(1, filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 1);
+$productsPerPage = 28;
+
+$attributeFilterKeys = [
+    'saveur_famille',
+    'contenance_ml',
+    'ratio_pg_vg',
+    'nicotine_mg',
+    'sel_nicotine',
+];
+
+$attributeFilterLabels = [
+    'saveur_famille' => 'SAVEUR',
+    'contenance_ml' => 'CONTENANCE (ML)',
+    'ratio_pg_vg' => 'RATIO PG/VG',
+    'nicotine_mg' => 'NICOTINE (MG)',
+    'sel_nicotine' => 'SEL DE NICOTINE',
+];
+
+$selectedAttributeFilters = [];
+foreach ($attributeFilterKeys as $attributeKey) {
+    $selectedAttributeFilters[$attributeKey] = array_values(array_filter((array) ($_GET[$attributeKey] ?? []), static function ($value): bool {
+        return is_string($value) && trim($value) !== '';
+    }));
+}
 
 include 'header.php';
 
@@ -44,6 +71,28 @@ function buildProductImagePath(?string $rawImage): string
 }
 
 /**
+ * @param array<string, mixed> $queryParams
+ */
+function buildPaginationUrl(int $page, array $queryParams): string
+{
+    $queryParams['page'] = $page;
+    $query = http_build_query($queryParams);
+
+    return 'collection.php' . ($query !== '' ? '?' . $query : '');
+}
+
+/**
+ * @param PDOStatement $stmt
+ * @param array<string, mixed> $params
+ */
+function bindNamedParams(PDOStatement $stmt, array $params): void
+{
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+}
+
+/**
  * @param PDO $pdo
  * @param string $column
  * @param string|null $category
@@ -61,39 +110,84 @@ function fetchDistinctStringOptions(PDO $pdo, string $column, ?string $category 
 
     if ($category !== null && $category !== 'tous') {
         $sql .= ' AND categorie_id = (SELECT id FROM categories WHERE slug = :cat LIMIT 1)';
-        $params['cat'] = $category;
+        $params[':cat'] = $category;
     }
 
     $sql .= " ORDER BY {$column} ASC";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    bindNamedParams($stmt, $params);
+    $stmt->execute();
 
     return array_values(array_filter(array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
 }
 
 /**
  * @param PDO $pdo
+ * @param array<int, string> $attributeKeys
  * @param string|null $category
- * @return array<int, int>
+ * @return array<string, array<int, string>>
  */
-function fetchDistinctContenances(PDO $pdo, ?string $category = null): array
+function fetchAttributeFilterOptions(PDO $pdo, array $attributeKeys, ?string $category = null): array
 {
-    $sql = 'SELECT DISTINCT contenance FROM produits WHERE is_active = 1 AND contenance IS NOT NULL';
-    $params = [];
-
-    if ($category !== null && $category !== 'tous') {
-        $sql .= ' AND categorie_id = (SELECT id FROM categories WHERE slug = :cat LIMIT 1)';
-        $params['cat'] = $category;
+    if (empty($attributeKeys)) {
+        return [];
     }
 
-    $sql .= ' ORDER BY contenance ASC';
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    $attributePlaceholders = [];
+    $params = [];
 
-    return array_values(array_filter(array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
+    foreach ($attributeKeys as $index => $attributeKey) {
+        $placeholder = ':attr_name_' . $index;
+        $attributePlaceholders[] = $placeholder;
+        $params[$placeholder] = $attributeKey;
+    }
+
+    $sql = 'SELECT pa.attribut_nom, pa.attribut_valeur
+            FROM produit_attributs pa
+            INNER JOIN produits p ON p.id = pa.produit_id
+            INNER JOIN categories c ON c.id = p.categorie_id
+            WHERE p.is_active = 1
+              AND pa.attribut_nom IN (' . implode(', ', $attributePlaceholders) . ")
+              AND pa.attribut_valeur IS NOT NULL
+              AND pa.attribut_valeur <> ''";
+
+    if ($category !== null && $category !== 'tous') {
+        $sql .= ' AND c.slug = :cat';
+        $params[':cat'] = $category;
+    }
+
+    $sql .= ' GROUP BY pa.attribut_nom, pa.attribut_valeur
+              ORDER BY pa.attribut_nom ASC, pa.attribut_valeur ASC';
+
+    $stmt = $pdo->prepare($sql);
+    bindNamedParams($stmt, $params);
+    $stmt->execute();
+
+    $options = [];
+    foreach ($attributeKeys as $attributeKey) {
+        $options[$attributeKey] = [];
+    }
+
+    while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+        $name = isset($row['attribut_nom']) ? (string) $row['attribut_nom'] : '';
+        $value = isset($row['attribut_valeur']) ? trim((string) $row['attribut_valeur']) : '';
+
+        if ($name === '' || $value === '' || !array_key_exists($name, $options)) {
+            continue;
+        }
+
+        $options[$name][] = $value;
+    }
+
+    foreach ($options as $name => $values) {
+        $options[$name] = array_values(array_unique($values));
+    }
+
+    return $options;
 }
 
 $brandOptions = fetchDistinctStringOptions($pdo, 'marque', $category);
+$attributeFilterOptions = fetchAttributeFilterOptions($pdo, $attributeFilterKeys, $category);
 ?>
 
 <div class="banner-container">
@@ -189,23 +283,47 @@ $brandOptions = fetchDistinctStringOptions($pdo, 'marque', $category);
             <input type="hidden" name="cat" value="<?= e($category); ?>">
             <h2 class="filter-title">FILTRER PAR</h2>
 
-            <div class="filter-group">
-                <h3>MARQUES</h3>
-                <ul>
-                    <?php foreach ($brandOptions as $index => $brand): ?>
-                        <?php $id = 'brand_' . $index; ?>
-                        <li>
-                            <input type="checkbox" name="brand[]" id="<?= e($id); ?>" value="<?= e($brand); ?>" <?= in_array($brand, $selectedBrands, true) ? 'checked' : ''; ?>>
-                            <label for="<?= e($id); ?>"><?= e($brand); ?></label>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
+            <?php if (!empty($brandOptions)): ?>
+                <div class="filter-group">
+                    <h3>MARQUES</h3>
+                    <ul>
+                        <?php foreach ($brandOptions as $index => $brand): ?>
+                            <?php $id = 'brand_' . $index; ?>
+                            <li>
+                                <input type="checkbox" name="brand[]" id="<?= e($id); ?>" value="<?= e($brand); ?>" <?= in_array($brand, $selectedBrands, true) ? 'checked' : ''; ?>>
+                                <label for="<?= e($id); ?>"><?= e($brand); ?></label>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
 
-            <div class="filter-group">
-                <h3>FILTRES TEMPORAIREMENT DÉSACTIVÉS</h3>
-                <p style="margin: 0; color: #7b8794;">Seul le filtre marque est disponible pour le moment.</p>
-            </div>
+            <?php foreach ($attributeFilterKeys as $attributeKey): ?>
+                <?php
+                $options = $attributeFilterOptions[$attributeKey] ?? [];
+                if (empty($options)) {
+                    continue;
+                }
+                ?>
+                <div class="filter-group">
+                    <h3><?= e($attributeFilterLabels[$attributeKey] ?? strtoupper(str_replace('_', ' ', $attributeKey))); ?></h3>
+                    <ul>
+                        <?php foreach ($options as $index => $option): ?>
+                            <?php $id = $attributeKey . '_' . $index; ?>
+                            <li>
+                                <input
+                                    type="checkbox"
+                                    name="<?= e($attributeKey); ?>[]"
+                                    id="<?= e($id); ?>"
+                                    value="<?= e($option); ?>"
+                                    <?= in_array($option, $selectedAttributeFilters[$attributeKey] ?? [], true) ? 'checked' : ''; ?>
+                                >
+                                <label for="<?= e($id); ?>"><?= e($option); ?></label>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endforeach; ?>
 
             <?php if ($searchQuery !== ''): ?>
                 <input type="hidden" name="q" value="<?= e($searchQuery); ?>">
@@ -223,20 +341,20 @@ $brandOptions = fetchDistinctStringOptions($pdo, 'marque', $category);
         <div class="products-grid">
             <?php
             $sql = 'SELECT p.* FROM produits p LEFT JOIN categories c ON c.id = p.categorie_id WHERE p.is_active = 1';
-$params = [];
+            $params = [];
 
-if ($category !== 'tous') {
-    $sql .= ' AND c.slug = :cat';
-    $params['cat'] = $category;
-}
+            if ($category !== 'tous') {
+                $sql .= ' AND c.slug = :cat';
+                $params[':cat'] = $category;
+            }
 
-if ($searchQuery !== '') {
-    $sql .= ' AND (p.nom LIKE :q_nom OR p.marque LIKE :q_marque OR p.slug LIKE :q_slug)';
-    $searchLike = '%' . $searchQuery . '%';
-    $params['q_nom'] = $searchLike;
-    $params['q_marque'] = $searchLike;
-    $params['q_slug'] = $searchLike;
-}
+            if ($searchQuery !== '') {
+                $sql .= ' AND (p.nom LIKE :q_nom OR p.marque LIKE :q_marque OR p.slug LIKE :q_slug)';
+                $searchLike = '%' . $searchQuery . '%';
+                $params[':q_nom'] = $searchLike;
+                $params[':q_marque'] = $searchLike;
+                $params[':q_slug'] = $searchLike;
+            }
 
             if (!empty($selectedBrands)) {
                 $brandPlaceholders = [];
@@ -248,52 +366,115 @@ if ($searchQuery !== '') {
                 $sql .= ' AND p.marque IN (' . implode(', ', $brandPlaceholders) . ')';
             }
 
+            foreach ($attributeFilterKeys as $attributeKey) {
+                $selectedValues = $selectedAttributeFilters[$attributeKey] ?? [];
+                if (empty($selectedValues)) {
+                    continue;
+                }
+
+                $valuePlaceholders = [];
+                foreach ($selectedValues as $valueIndex => $selectedValue) {
+                    $valuePlaceholder = ':attr_' . $attributeKey . '_value_' . $valueIndex;
+                    $valuePlaceholders[] = $valuePlaceholder;
+                    $params[$valuePlaceholder] = $selectedValue;
+                }
+
+                if (!empty($valuePlaceholders)) {
+                    $namePlaceholder = ':attr_' . $attributeKey . '_name';
+                    $params[$namePlaceholder] = $attributeKey;
+                    $sql .= ' AND EXISTS (
+                                SELECT 1
+                                FROM produit_attributs pa
+                                WHERE pa.produit_id = p.id
+                                  AND pa.attribut_nom = ' . $namePlaceholder . '
+                                  AND pa.attribut_valeur IN (' . implode(', ', $valuePlaceholders) . ')
+                              )';
+                }
+            }
+
+            $countSql = 'SELECT COUNT(*) FROM (' . $sql . ') AS filtered_products';
+            $countStmt = $pdo->prepare($countSql);
+            bindNamedParams($countStmt, $params);
+            $countStmt->execute();
+            $totalProducts = (int) $countStmt->fetchColumn();
+            $totalPages = max(1, (int) ceil($totalProducts / $productsPerPage));
+            $currentPage = min($currentPage, $totalPages);
+            $offset = ($currentPage - 1) * $productsPerPage;
+
+            $sql .= ' ORDER BY p.id DESC LIMIT :limit OFFSET :offset';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            bindNamedParams($stmt, $params);
+            $stmt->bindValue(':limit', $productsPerPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
             $produits = $stmt->fetchAll(PDO::FETCH_ASSOC);
             ?>
-            <div style="margin-bottom: 12px; color: #7b8794; font-size: 0.9rem;">
-    Debug — catégorie: <strong><?= e($category); ?></strong> | produits trouvés: <strong><?= count($produits); ?></strong>
-</div>
-            <?php
 
-            if (!empty($produits)):
-                foreach ($produits as $p):
+            <?php if (!empty($produits)): ?>
+                <?php foreach ($produits as $p): ?>
+                    <?php
                     $prixRegulier = (float) ($p['prix_regulier'] ?? 0);
                     $prixPromo = isset($p['prix_promo']) && $p['prix_promo'] !== null ? (float) $p['prix_promo'] : null;
                     $prixFinal = $prixPromo ?: $prixRegulier;
+                    $hasPromo = $prixPromo !== null || !empty($p['is_promo']);
                     ?>
                     <div class="product-card">
-                        <?php if (!empty($p['is_promo'])): ?>
-                            <div class="badge-promo">BONS PLANS</div>
+                        <?php if ($hasPromo): ?>
+                            <div class="badge-promo">PROMO</div>
                         <?php endif; ?>
 
-                        <img src="<?= e(buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null)); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
-
-                        <span class="product-brand"><?= e($p['marque'] ?? 'Big Monkey'); ?></span>
-                        <h3 class="product-name"><?= e($p['nom'] ?? 'Produit'); ?></h3>
-
-                        <div class="product-price">
-                            <?php if ($prixPromo): ?>
-                                <span style="text-decoration: line-through; font-size: 0.8rem; color: #888;">
-                                    <?= number_format($prixRegulier, 0, '.', ' '); ?> Ar
-                                </span><br>
-                            <?php endif; ?>
-
-                            <?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span>
+                        <div class="product-image-wrap">
+                            <img src="<?= e(buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null)); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
                         </div>
 
-                        <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view">VOIR LE PRODUIT</a>
+                        <div class="product-card-body">
+                            <span class="product-brand"><?= e($p['marque'] ?? 'Big Monkey'); ?></span>
+                            <h3 class="product-name"><?= e($p['nom'] ?? 'Produit'); ?></h3>
+
+                            <?php if (!empty($p['description_courte'])): ?>
+                                <p class="product-short-description"><?= nl2br(e($p['description_courte'])); ?></p>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="product-price">
+                            <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
+                        </div>
+
+                        <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view">AJOUTER</a>
                     </div>
-                <?php
-                endforeach;
-            else:
-                ?>
+                <?php endforeach; ?>
+            <?php else: ?>
                 <p style="grid-column: 1 / -1; text-align: center; color: #7b8794; font-weight: 700;">
                     Aucun produit trouvé dans cette catégorie pour le moment.
                 </p>
             <?php endif; ?>
         </div>
+
+        <?php if ($totalPages > 1): ?>
+            <?php
+            $paginationQueryParams = $_GET;
+            unset($paginationQueryParams['page']);
+            ?>
+            <nav class="collection-pagination" aria-label="Pagination des produits">
+                <?php if ($currentPage > 1): ?>
+                    <a class="pagination-link" href="<?= e(buildPaginationUrl($currentPage - 1, $paginationQueryParams)); ?>" aria-label="Page précédente">←</a>
+                <?php endif; ?>
+
+                <?php for ($page = 1; $page <= $totalPages; $page++): ?>
+                    <a
+                        class="pagination-link <?= $page === $currentPage ? 'is-active' : ''; ?>"
+                        href="<?= e(buildPaginationUrl($page, $paginationQueryParams)); ?>"
+                        <?= $page === $currentPage ? 'aria-current="page"' : ''; ?>
+                    >
+                        <?= $page; ?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($currentPage < $totalPages): ?>
+                    <a class="pagination-link" href="<?= e(buildPaginationUrl($currentPage + 1, $paginationQueryParams)); ?>" aria-label="Page suivante">→</a>
+                <?php endif; ?>
+            </nav>
+        <?php endif; ?>
     </main>
 </div>
 
