@@ -511,18 +511,18 @@ foreach ($attributeFilterKeys as $attributeKey) {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #fff;
-    border: 1px solid #eceff3;
-    border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.07);
+    background: #f4f5f7;
+    border: 1px solid #d7dde4;
+    border-radius: 10px;
+    box-shadow: none;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .product-card:hover {
-    transform: translateY(-4px);
-    border-color: #e1e6ec;
-    box-shadow: 0 16px 32px rgba(16, 24, 40, 0.14);
+    transform: translateY(-2px);
+    border-color: #c8d0d9;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
 }
 
 .badge-promo {
@@ -542,20 +542,20 @@ foreach ($attributeFilterKeys as $attributeKey) {
 }
 
 .product-image-wrap {
-    height: 300px;
+    height: 280px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8fafb;
+    background: #f4f5f7;
     padding: 0;
-    border-bottom: 1px solid #eef2f6;
+    border-bottom: 1px solid #dfe5eb;
     overflow: hidden;
 }
 
 .product-image-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 86%;
+    height: 86%;
+    object-fit: contain;
     object-position: center;
     display: block;
 }
@@ -563,15 +563,17 @@ foreach ($attributeFilterKeys as $attributeKey) {
 .product-card-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 10px 14px 4px;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 10px 14px 6px;
     min-height: auto;
 }
 
 .product-brand {
-    color: #f0b90b;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
+    color: #7b8794;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -579,108 +581,110 @@ foreach ($attributeFilterKeys as $attributeKey) {
 .product-name {
     margin: 0;
     font-size: 0.98rem;
-    line-height: 1.16;
-    color: #121212;
+    line-height: 1.22;
+    color: #172b4d;
     font-weight: 700;
     min-height: 2.2em;
 }
 
 .product-short-description {
     margin: 0;
-    color: #7a8696;
-    font-size: 0.82rem;
-    line-height: 1.22;
+    color: #66758a;
+    font-size: 0.86rem;
+    line-height: 1.28;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-height: 2.3em;
+    text-align: center;
 }
 
 .product-price {
-    padding: 0 14px 8px;
-    margin-top: auto;
+    padding: 0 12px 8px;
+    margin-top: 0;
+    text-align: center;
 }
 
 .product-price-badge {
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
-    color: #111;
-    font-size: 1.32rem;
-    font-weight: 800;
+    color: #10a5c8;
+    font-size: 2rem;
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
 }
 
 .product-price-badge span {
-    font-size: 0.78rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: #606f7b;
+    color: #2f3f56;
 }
 
 .product-card-actions {
-    display: flex;
-    align-items: stretch;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
     margin-top: auto;
-    padding: 0 14px 12px;
+    padding: 0 12px 14px;
     width: 100%;
 }
 
 .btn-view-product {
-    flex: 1 1 50%;
+    width: 100%;
     display: inline-flex;
     gap: 8px;
     justify-content: center;
     align-items: center;
-    min-height: 54px;
+    min-height: 48px;
     padding: 0 12px;
-    border-radius: 12px;
-    border: 1px solid #111;
-    background: #111;
+    border-radius: 8px;
+    border: 1px solid #3f4651;
+    background: #3f4651;
     color: #fff;
     font-weight: 700;
     text-decoration: none;
-    font-size: 0.92rem;
+    font-size: 0.7rem;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     text-align: center;
-    line-height: 1.08;
+    line-height: 1.15;
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
 .btn-view-product:hover {
-    background: #1c1c1c;
-    color: #ffd84d;
-    border-color: #1c1c1c;
+    background: #343a44;
+    color: #fff;
+    border-color: #343a44;
     transform: translateY(-1px);
 }
 
 .btn-cart-ready {
-    flex: 1 1 50%;
+    width: 100%;
     min-height: 54px;
     display: inline-flex;
     gap: 7px;
     justify-content: center;
     align-items: center;
-    border-radius: 12px;
-    border: 1px solid #d7dde4;
-    background: #fff;
-    color: #111;
+    border-radius: 8px;
+    border: 1px solid #10b4d7;
+    background: #10b4d7;
+    color: #fff;
     cursor: pointer;
-    font-size: 0.66rem;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     text-align: center;
-    line-height: 1.08;
+    line-height: 1.15;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .btn-view-product span {
     display: block;
-    width: 100%;
     text-align: center;
 }
 
@@ -690,18 +694,17 @@ foreach ($attributeFilterKeys as $attributeKey) {
 
 .btn-cart-ready span {
     display: block;
-    margin: 0 auto;
-    max-width: 88px;
-    width: 100%;
+    max-width: 105px;
     text-align: center;
     line-height: 1.15;
     white-space: normal;
 }
 
 .btn-cart-ready:hover {
-    border-color: #161616;
-    color: #000;
-    box-shadow: 0 0 0 2px rgba(255, 216, 77, 0.3);
+    border-color: #0ea5c6;
+    color: #fff;
+    background: #0ea5c6;
+    box-shadow: 0 0 0 2px rgba(16, 180, 215, 0.25);
     transform: translateY(-1px);
 }
 
@@ -720,9 +723,14 @@ foreach ($attributeFilterKeys as $attributeKey) {
         padding: 0;
     }
 
+    .product-image-wrap img {
+        width: 88%;
+        height: 88%;
+    }
+
     .product-card-body {
         min-height: auto;
-        padding: 9px 10px 4px;
+        padding: 8px 10px 5px;
     }
 
     .product-name {
@@ -734,7 +742,7 @@ foreach ($attributeFilterKeys as $attributeKey) {
     }
 
     .product-price {
-        padding: 0 10px 7px;
+        padding: 0 10px 8px;
     }
 
     .product-card-actions {
@@ -747,16 +755,12 @@ foreach ($attributeFilterKeys as $attributeKey) {
         min-height: 48px;
     }
 
-    .btn-view-product {
-        font-size: 0.78rem;
-    }
-
     .btn-cart-ready {
-        font-size: 0.58rem;
+        font-size: 0.64rem;
     }
 
     .btn-cart-ready span {
-        max-width: 72px;
+        max-width: 86px;
     }
 }
 </style>
