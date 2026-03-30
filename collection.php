@@ -10,11 +10,6 @@ require_once 'config.php';
 $rawCategory = isset($_GET['cat']) ? (string) $_GET['cat'] : 'tous';
 $category = preg_match('/^[a-zA-Z0-9_-]{1,50}$/', $rawCategory) ? $rawCategory : 'tous';
 $selectedBrands = array_values(array_filter((array) ($_GET['brand'] ?? []), 'is_string'));
-$selectedSaveurs = array_values(array_filter((array) ($_GET['saveur'] ?? []), 'is_string'));
-$selectedContenances = array_map('intval', (array) ($_GET['contenance'] ?? []));
-$selectedRatios = array_values(array_filter((array) ($_GET['ratio_pg_vg'] ?? []), 'is_string'));
-$selectedNicotineTypes = array_values(array_filter((array) ($_GET['nicotine_type'] ?? []), 'is_string'));
-$selectedNicotineDosages = array_values(array_filter((array) ($_GET['nicotine_dosage'] ?? []), 'is_string'));
 $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 
 include 'header.php';
@@ -28,6 +23,27 @@ function e($value): string
 }
 
 /**
+ * @param string|null $rawImage
+ */
+function buildProductImagePath(?string $rawImage): string
+{
+    $image = trim((string) $rawImage);
+    if ($image === '') {
+        return 'img/produits/placeholder.jpg';
+    }
+
+    if (preg_match('/^(https?:)?\/\//i', $image) === 1) {
+        return $image;
+    }
+
+    if (strpos($image, 'img/') === 0 || strpos($image, '/img/') === 0) {
+        return ltrim($image, '/');
+    }
+
+    return 'img/produits/' . ltrim($image, '/');
+}
+
+/**
  * @param PDO $pdo
  * @param string $column
  * @param string|null $category
@@ -35,7 +51,7 @@ function e($value): string
  */
 function fetchDistinctStringOptions(PDO $pdo, string $column, ?string $category = null): array
 {
-    $allowedColumns = ['marque', 'saveur', 'ratio_pg_vg', 'taux_nicotine_dispo'];
+    $allowedColumns = ['marque'];
     if (!in_array($column, $allowedColumns, true)) {
         return [];
     }
@@ -44,7 +60,7 @@ function fetchDistinctStringOptions(PDO $pdo, string $column, ?string $category 
     $params = [];
 
     if ($category !== null && $category !== 'tous') {
-        $sql .= ' AND (categorie_parent = :cat OR slug = :cat)';
+        $sql .= ' AND categorie_id = (SELECT id FROM categories WHERE slug = :cat LIMIT 1)';
         $params['cat'] = $category;
     }
 
@@ -66,7 +82,7 @@ function fetchDistinctContenances(PDO $pdo, ?string $category = null): array
     $params = [];
 
     if ($category !== null && $category !== 'tous') {
-        $sql .= ' AND (categorie_parent = :cat OR slug = :cat)';
+        $sql .= ' AND categorie_id = (SELECT id FROM categories WHERE slug = :cat LIMIT 1)';
         $params['cat'] = $category;
     }
 
@@ -78,10 +94,6 @@ function fetchDistinctContenances(PDO $pdo, ?string $category = null): array
 }
 
 $brandOptions = fetchDistinctStringOptions($pdo, 'marque', $category);
-$saveurOptions = fetchDistinctStringOptions($pdo, 'saveur', $category);
-$ratioOptions = fetchDistinctStringOptions($pdo, 'ratio_pg_vg', $category);
-$nicotineDosageOptions = fetchDistinctStringOptions($pdo, 'taux_nicotine_dispo', $category);
-$contenanceOptions = fetchDistinctContenances($pdo, $category);
 ?>
 
 <div class="banner-container">
@@ -191,69 +203,8 @@ $contenanceOptions = fetchDistinctContenances($pdo, $category);
             </div>
 
             <div class="filter-group">
-                <h3>SAVEURS</h3>
-                <ul>
-                    <?php foreach ($saveurOptions as $index => $saveur): ?>
-                        <?php $id = 'saveur_' . $index; ?>
-                        <li>
-                            <input type="checkbox" name="saveur[]" id="<?= e($id); ?>" value="<?= e($saveur); ?>" <?= in_array($saveur, $selectedSaveurs, true) ? 'checked' : ''; ?>>
-                            <label for="<?= e($id); ?>"><?= e($saveur); ?></label>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-
-            <div class="filter-group">
-                <h3>CONTENANCES</h3>
-                <ul>
-                    <?php foreach ($contenanceOptions as $index => $contenance): ?>
-                        <?php $id = 'contenance_' . $index; ?>
-                        <li>
-                            <input type="checkbox" name="contenance[]" id="<?= e($id); ?>" value="<?= e((string) $contenance); ?>" <?= in_array($contenance, $selectedContenances, true) ? 'checked' : ''; ?>>
-                            <label for="<?= e($id); ?>"><?= e((string) $contenance); ?> ML</label>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-
-            <div class="filter-group">
-                <h3>RATIO PG/VG</h3>
-                <ul>
-                    <?php foreach ($ratioOptions as $index => $ratio): ?>
-                        <?php $id = 'ratio_' . $index; ?>
-                        <li>
-                            <input type="checkbox" name="ratio_pg_vg[]" id="<?= e($id); ?>" value="<?= e($ratio); ?>" <?= in_array($ratio, $selectedRatios, true) ? 'checked' : ''; ?>>
-                            <label for="<?= e($id); ?>"><?= e($ratio); ?></label>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-
-            <div class="filter-group">
-                <h3>TYPE NICOTINE (10ML)</h3>
-                <ul>
-                    <li>
-                        <input type="checkbox" name="nicotine_type[]" id="nic_freebase" value="freebase" <?= in_array('freebase', $selectedNicotineTypes, true) ? 'checked' : ''; ?>>
-                        <label for="nic_freebase">Freebase</label>
-                    </li>
-                    <li>
-                        <input type="checkbox" name="nicotine_type[]" id="nic_sel" value="sel" <?= in_array('sel', $selectedNicotineTypes, true) ? 'checked' : ''; ?>>
-                        <label for="nic_sel">Sel de nicotine</label>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="filter-group">
-                <h3>DOSAGE NICOTINE</h3>
-                <ul>
-                    <?php foreach ($nicotineDosageOptions as $index => $dosage): ?>
-                        <?php $id = 'dosage_' . $index; ?>
-                        <li>
-                            <input type="checkbox" name="nicotine_dosage[]" id="<?= e($id); ?>" value="<?= e($dosage); ?>" <?= in_array($dosage, $selectedNicotineDosages, true) ? 'checked' : ''; ?>>
-                            <label for="<?= e($id); ?>"><?= e($dosage); ?></label>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <h3>FILTRES TEMPORAIREMENT DÉSACTIVÉS</h3>
+                <p style="margin: 0; color: #7b8794;">Seul le filtre marque est disponible pour le moment.</p>
             </div>
 
             <?php if ($searchQuery !== ''): ?>
@@ -271,18 +222,21 @@ $contenanceOptions = fetchDistinctContenances($pdo, $category);
 
         <div class="products-grid">
             <?php
-            $sql = 'SELECT * FROM produits WHERE is_active = 1';
-            $params = [];
+            $sql = 'SELECT p.* FROM produits p LEFT JOIN categories c ON c.id = p.categorie_id WHERE p.is_active = 1';
+$params = [];
 
-            if ($category !== 'tous') {
-                $sql .= ' AND (categorie_parent = :cat OR slug = :cat)';
-                $params['cat'] = $category;
-            }
+if ($category !== 'tous') {
+    $sql .= ' AND c.slug = :cat';
+    $params['cat'] = $category;
+}
 
-            if ($searchQuery !== '') {
-                $sql .= ' AND (nom LIKE :q OR marque LIKE :q OR slug LIKE :q)';
-                $params['q'] = '%' . $searchQuery . '%';
-            }
+if ($searchQuery !== '') {
+    $sql .= ' AND (p.nom LIKE :q_nom OR p.marque LIKE :q_marque OR p.slug LIKE :q_slug)';
+    $searchLike = '%' . $searchQuery . '%';
+    $params['q_nom'] = $searchLike;
+    $params['q_marque'] = $searchLike;
+    $params['q_slug'] = $searchLike;
+}
 
             if (!empty($selectedBrands)) {
                 $brandPlaceholders = [];
@@ -291,63 +245,17 @@ $contenanceOptions = fetchDistinctContenances($pdo, $category);
                     $brandPlaceholders[] = $key;
                     $params[$key] = $brand;
                 }
-                $sql .= ' AND marque IN (' . implode(', ', $brandPlaceholders) . ')';
-            }
-
-            if (!empty($selectedSaveurs)) {
-                $saveurPlaceholders = [];
-                foreach ($selectedSaveurs as $index => $saveur) {
-                    $key = ':saveur_' . $index;
-                    $saveurPlaceholders[] = $key;
-                    $params[$key] = $saveur;
-                }
-                $sql .= ' AND saveur IN (' . implode(', ', $saveurPlaceholders) . ')';
-            }
-
-            if (!empty($selectedContenances)) {
-                $contenancePlaceholders = [];
-                foreach ($selectedContenances as $index => $contenance) {
-                    $key = ':contenance_' . $index;
-                    $contenancePlaceholders[] = $key;
-                    $params[$key] = $contenance;
-                }
-                $sql .= ' AND contenance IN (' . implode(', ', $contenancePlaceholders) . ')';
-            }
-
-            if (!empty($selectedRatios)) {
-                $ratioPlaceholders = [];
-                foreach ($selectedRatios as $index => $ratio) {
-                    $key = ':ratio_' . $index;
-                    $ratioPlaceholders[] = $key;
-                    $params[$key] = $ratio;
-                }
-                $sql .= ' AND ratio_pg_vg IN (' . implode(', ', $ratioPlaceholders) . ')';
-            }
-
-            if (!empty($selectedNicotineTypes)) {
-                $hasFreebase = in_array('freebase', $selectedNicotineTypes, true);
-                $hasSel = in_array('sel', $selectedNicotineTypes, true);
-
-                if ($hasFreebase && !$hasSel) {
-                    $sql .= ' AND (sel_nicotine = 0 OR sel_nicotine IS NULL)';
-                } elseif ($hasSel && !$hasFreebase) {
-                    $sql .= ' AND sel_nicotine = 1';
-                }
-            }
-
-            if (!empty($selectedNicotineDosages)) {
-                $dosagePlaceholders = [];
-                foreach ($selectedNicotineDosages as $index => $dosage) {
-                    $key = ':dosage_' . $index;
-                    $dosagePlaceholders[] = $key;
-                    $params[$key] = $dosage;
-                }
-                $sql .= ' AND taux_nicotine_dispo IN (' . implode(', ', $dosagePlaceholders) . ')';
+                $sql .= ' AND p.marque IN (' . implode(', ', $brandPlaceholders) . ')';
             }
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $produits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            ?>
+            <div style="margin-bottom: 12px; color: #7b8794; font-size: 0.9rem;">
+    Debug — catégorie: <strong><?= e($category); ?></strong> | produits trouvés: <strong><?= count($produits); ?></strong>
+</div>
+            <?php
 
             if (!empty($produits)):
                 foreach ($produits as $p):
@@ -360,7 +268,7 @@ $contenanceOptions = fetchDistinctContenances($pdo, $category);
                             <div class="badge-promo">BONS PLANS</div>
                         <?php endif; ?>
 
-                        <img src="img/produits/<?= e($p['image_principale'] ?? 'placeholder.jpg'); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
+                        <img src="<?= e(buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null)); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
 
                         <span class="product-brand"><?= e($p['marque'] ?? 'Big Monkey'); ?></span>
                         <h3 class="product-name"><?= e($p['nom'] ?? 'Produit'); ?></h3>
