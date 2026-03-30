@@ -178,6 +178,270 @@ foreach ($attributeFilterKeys as $attributeKey) {
 }
 ?>
 
+<style>
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+        align-items: stretch;
+    }
+
+    .product-card {
+        position: relative;
+        border: 1px solid #eeeeee;
+        border-radius: 12px;
+        background: #fff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .badge-promo {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 3;
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: #fff;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        box-shadow: 0 4px 12px rgba(185, 28, 28, 0.28);
+    }
+
+    .product-image-wrap {
+        width: 100%;
+        height: 300px;
+        padding: 0;
+        margin: 0;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .product-image-wrap img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    .product-card-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 3px;
+        padding: 12px 15px 6px;
+        flex-grow: 1;
+    }
+
+    .product-brand {
+        color: #7b8794;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .product-name {
+        margin: 3px 0 6px;
+        font-size: 1rem;
+        line-height: 1.2;
+        color: #000;
+        font-weight: 900;
+        min-height: 2.4em;
+        text-transform: uppercase;
+    }
+
+    .product-short-description {
+        margin: 0 0 10px;
+        color: #66758a;
+        font-size: 0.78rem;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.7em;
+        text-align: center;
+    }
+
+    .product-price {
+        padding: 0 15px 10px;
+        margin-top: auto;
+        text-align: center;
+    }
+
+    .product-price-badge {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+        color: #10a5c8;
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0;
+    }
+
+    .product-price-badge span {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2f3f56;
+    }
+
+    .product-card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: auto;
+        padding: 0 15px 15px;
+        width: 100%;
+    }
+
+    .btn-view-product {
+        width: 100%;
+        display: inline-flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        min-height: 50px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid #3f4651;
+        background: #3f4651;
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.7rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        text-align: center;
+        line-height: 1.15;
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-view-product:hover {
+        background: #343a44;
+        color: #fff;
+        border-color: #343a44;
+        transform: translateY(-1px);
+    }
+
+    .btn-cart-ready {
+        width: 100%;
+        min-height: 50px;
+        display: inline-flex;
+        gap: 7px;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+        border: 1px solid #f0b90b;
+        background: #f0b90b;
+        color: #111;
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        text-align: center;
+        line-height: 1.15;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .btn-view-product span {
+        display: block;
+        text-align: center;
+    }
+
+    .btn-cart-ready i {
+        font-size: 0.95rem;
+    }
+
+    .btn-cart-ready span {
+        display: block;
+        max-width: 105px;
+        text-align: center;
+        line-height: 1.15;
+        white-space: normal;
+    }
+
+    .btn-cart-ready:hover {
+        border-color: #d39f00;
+        color: #111;
+        background: #ffd248;
+        box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.25);
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 767px) {
+        .products-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .product-card {
+            border-radius: 14px;
+        }
+
+        .product-image-wrap {
+            height: 220px;
+            padding: 0;
+        }
+
+        .product-card-body {
+            min-height: auto;
+            gap: 3px;
+            padding: 10px 10px 5px;
+        }
+
+        .product-name {
+            font-size: 0.92rem;
+        }
+
+        .product-short-description {
+            font-size: 0.78rem;
+        }
+
+        .product-price {
+            padding: 0 10px 8px;
+        }
+
+        .product-card-actions {
+            padding: 0 10px 10px;
+            gap: 6px;
+        }
+
+        .btn-view-product,
+        .btn-cart-ready {
+            min-height: 46px;
+        }
+
+        .btn-view-product {
+            font-size: 0.78rem;
+        }
+
+        .btn-cart-ready {
+            font-size: 0.64rem;
+        }
+
+        .btn-cart-ready span {
+            max-width: 86px;
+        }
+    }
+</style>
+
 <div class="banner-container">
     <?php if (!isset($_SESSION['user_id'])): ?>
         <a href="compte.php" class="banner-link banner-desktop">
@@ -427,16 +691,17 @@ foreach ($attributeFilterKeys as $attributeKey) {
                         <div class="product-price">
                             <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
                         </div>
-<div class="product-card-actions">
-    <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view-product">
-        <i class="fas fa-eye" aria-hidden="true"></i>
-        <span>Voir le produit</span>
-    </a>
-    <button type="button" class="btn-cart-ready" aria-label="Ajouter au panier">
-        <i class="fas fa-shopping-cart" aria-hidden="true"></i>
-        <span>Ajouter au panier</span>
-    </button>
-</div>
+
+                        <div class="product-card-actions">
+                            <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view-product">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                                <span>Voir le produit</span>
+                            </a>
+                            <button type="button" class="btn-cart-ready" aria-label="Ajouter au panier">
+                                <i class="fas fa-shopping-cart" aria-hidden="true"></i>
+                                <span>Ajouter au panier</span>
+                            </button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -497,38 +762,5 @@ foreach ($attributeFilterKeys as $attributeKey) {
         }, 4000);
     });
 </script>
-
-<style>
-.product-image-wrap {
-    height: 280px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    padding: 0;
-    border-bottom: 0;
-    overflow: hidden;
-}
-
-.product-image-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-}
-
-@media (max-width: 767px) {
-    .product-image-wrap {
-        height: 220px;
-        padding: 0;
-    }
-
-    .product-image-wrap img {
-        width: 100%;
-        height: 100%;
-    }
-}
-</style>
 
 <?php include 'footer.php'; ?>
