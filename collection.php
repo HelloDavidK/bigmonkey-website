@@ -12,7 +12,7 @@ $category = preg_match('/^[a-zA-Z0-9_-]{1,50}$/', $rawCategory) ? $rawCategory :
 $selectedBrands = array_values(array_filter((array) ($_GET['brand'] ?? []), static function ($value): bool {
     return is_string($value) && trim($value) !== '';
 }));
-$searchQuery = isset($_GET['q']) ? trim((string) $searchQuery = $_GET['q']) : '';
+$searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 $currentPage = max(1, filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 1);
 $productsPerPage = 28;
 
@@ -123,71 +123,59 @@ function fetchDistinctStringOptions(PDO $pdo, string $column, ?string $category 
 
 /**
  * @param PDO $pdo
- * @param array<int, string> $attributeKeys
+ * @param string $attributeName
  * @param string|null $category
- * @return array<string, array<int, string>>
+ * @return array<int, array{value: string, total: int}>
  */
-function fetchAttributeFilterOptions(PDO $pdo, array $attributeKeys, ?string $category = null): array
+function fetchAttributeOptions(PDO $pdo, string $attributeName, ?string $category = null): array
 {
-    if (empty($attributeKeys)) {
-        return [];
-    }
-
-    $attributePlaceholders = [];
-    $params = [];
-
-    foreach ($attributeKeys as $index => $attributeKey) {
-        $placeholder = ':attr_name_' . $index;
-        $attributePlaceholders[] = $placeholder;
-        $params[$placeholder] = $attributeKey;
-    }
-
-    $sql = 'SELECT pa.attribut_nom, pa.attribut_valeur
+    $sql = 'SELECT pa.attribut_valeur AS value, COUNT(DISTINCT p.id) AS total
             FROM produit_attributs pa
             INNER JOIN produits p ON p.id = pa.produit_id
             INNER JOIN categories c ON c.id = p.categorie_id
             WHERE p.is_active = 1
-              AND pa.attribut_nom IN (' . implode(', ', $attributePlaceholders) . ")
+              AND pa.attribut_nom = :attribute
               AND pa.attribut_valeur IS NOT NULL
-              AND pa.attribut_valeur <> ''";
+              AND pa.attribut_valeur <> \'\'';
 
     if ($category !== null && $category !== 'tous') {
         $sql .= ' AND c.slug = :cat';
-        $params[':cat'] = $category;
     }
 
-    $sql .= ' GROUP BY pa.attribut_nom, pa.attribut_valeur
-              ORDER BY pa.attribut_nom ASC, pa.attribut_valeur ASC';
+    $sql .= ' GROUP BY pa.attribut_valeur
+              ORDER BY pa.attribut_valeur ASC';
 
     $stmt = $pdo->prepare($sql);
-    bindNamedParams($stmt, $params);
-    $stmt->execute();
 
-    $options = [];
-    foreach ($attributeKeys as $attributeKey) {
-        $options[$attributeKey] = [];
+    if ($category !== null && $category !== 'tous') {
+        $stmt->execute(['attribute' => $attributeName, 'cat' => $category]);
+    } else {
+        $stmt->execute(['attribute' => $attributeName]);
     }
 
+    $options = [];
     while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
-        $name = isset($row['attribut_nom']) ? (string) $row['attribut_nom'] : '';
-        $value = isset($row['attribut_valeur']) ? trim((string) $row['attribut_valeur']) : '';
+        $value = isset($row['value']) ? trim((string) $row['value']) : '';
+        $total = isset($row['total']) ? (int) $row['total'] : 0;
 
-        if ($name === '' || $value === '' || !array_key_exists($name, $options)) {
+        if ($value === '' || $total <= 0) {
             continue;
         }
 
-        $options[$name][] = $value;
-    }
-
-    foreach ($options as $name => $values) {
-        $options[$name] = array_values(array_unique($values));
+        $options[] = [
+            'value' => $value,
+            'total' => $total,
+        ];
     }
 
     return $options;
 }
 
 $brandOptions = fetchDistinctStringOptions($pdo, 'marque', $category);
-$attributeFilterOptions = fetchAttributeFilterOptions($pdo, $attributeFilterKeys, $category);
+$attributeFilterOptions = [];
+foreach ($attributeFilterKeys as $attributeKey) {
+    $attributeFilterOptions[$attributeKey] = fetchAttributeOptions($pdo, $attributeKey, $category);
+}
 ?>
 
 <div class="banner-container">
@@ -315,10 +303,10 @@ $attributeFilterOptions = fetchAttributeFilterOptions($pdo, $attributeFilterKeys
                                     type="checkbox"
                                     name="<?= e($attributeKey); ?>[]"
                                     id="<?= e($id); ?>"
-                                    value="<?= e($option); ?>"
-                                    <?= in_array($option, $selectedAttributeFilters[$attributeKey] ?? [], true) ? 'checked' : ''; ?>
+                                    value="<?= e($option['value']); ?>"
+                                    <?= in_array($option['value'], $selectedAttributeFilters[$attributeKey] ?? [], true) ? 'checked' : ''; ?>
                                 >
-                                <label for="<?= e($id); ?>"><?= e($option); ?></label>
+                                <label for="<?= e($id); ?>"><?= e($option['value']); ?> (<?= (int) $option['total']; ?>)</label>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -439,8 +427,16 @@ $attributeFilterOptions = fetchAttributeFilterOptions($pdo, $attributeFilterKeys
                         <div class="product-price">
                             <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
                         </div>
-
-                        <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view">AJOUTER</a>
+<div class="product-card-actions">
+    <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view-product">
+        <i class="fas fa-eye" aria-hidden="true"></i>
+        <span>Voir le produit</span>
+    </a>
+    <button type="button" class="btn-cart-ready" aria-label="Ajouter au panier">
+        <i class="fas fa-shopping-cart" aria-hidden="true"></i>
+        <span>Ajouter au panier</span>
+    </button>
+</div>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -501,5 +497,268 @@ $attributeFilterOptions = fetchAttributeFilterOptions($pdo, $attributeFilterKeys
         }, 4000);
     });
 </script>
+
+<style>
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+.product-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+    border: 1px solid #eceff3;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.07);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    border-color: #e1e6ec;
+    box-shadow: 0 16px 32px rgba(16, 24, 40, 0.14);
+}
+
+.badge-promo {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 3;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #fff;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    box-shadow: 0 4px 12px rgba(185, 28, 28, 0.28);
+}
+
+.product-image-wrap {
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafb;
+    padding: 0;
+    border-bottom: 1px solid #eef2f6;
+    overflow: hidden;
+}
+
+.product-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.product-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px 4px;
+    min-height: auto;
+}
+
+.product-brand {
+    color: #f0b90b;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.product-name {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.16;
+    color: #121212;
+    font-weight: 700;
+    min-height: 2.2em;
+}
+
+.product-short-description {
+    margin: 0;
+    color: #7a8696;
+    font-size: 0.82rem;
+    line-height: 1.22;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.3em;
+}
+
+.product-price {
+    padding: 0 14px 8px;
+    margin-top: auto;
+}
+
+.product-price-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    color: #111;
+    font-size: 1.32rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.01em;
+}
+
+.product-price-badge span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #606f7b;
+}
+
+.product-card-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: auto;
+    padding: 0 14px 12px;
+    width: 100%;
+}
+
+.btn-view-product {
+    flex: 1 1 50%;
+    display: inline-flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    min-height: 54px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid #111;
+    background: #111;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.08;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.btn-view-product:hover {
+    background: #1c1c1c;
+    color: #ffd84d;
+    border-color: #1c1c1c;
+    transform: translateY(-1px);
+}
+
+.btn-cart-ready {
+    flex: 1 1 50%;
+    min-height: 54px;
+    display: inline-flex;
+    gap: 7px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    border: 1px solid #d7dde4;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.08;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.btn-view-product span {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-cart-ready i {
+    font-size: 0.95rem;
+}
+
+.btn-cart-ready span {
+    display: block;
+    margin: 0 auto;
+    max-width: 88px;
+    width: 100%;
+    text-align: center;
+    line-height: 1.15;
+    white-space: normal;
+}
+
+.btn-cart-ready:hover {
+    border-color: #161616;
+    color: #000;
+    box-shadow: 0 0 0 2px rgba(255, 216, 77, 0.3);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 767px) {
+    .products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .product-card {
+        border-radius: 14px;
+    }
+
+    .product-image-wrap {
+        height: 220px;
+        padding: 0;
+    }
+
+    .product-card-body {
+        min-height: auto;
+        padding: 9px 10px 4px;
+    }
+
+    .product-name {
+        font-size: 0.92rem;
+    }
+
+    .product-short-description {
+        font-size: 0.78rem;
+    }
+
+    .product-price {
+        padding: 0 10px 7px;
+    }
+
+    .product-card-actions {
+        padding: 0 10px 10px;
+        gap: 6px;
+    }
+
+    .btn-view-product,
+    .btn-cart-ready {
+        min-height: 48px;
+    }
+
+    .btn-view-product {
+        font-size: 0.78rem;
+    }
+
+    .btn-cart-ready {
+        font-size: 0.58rem;
+    }
+
+    .btn-cart-ready span {
+        max-width: 72px;
+    }
+}
+</style>
 
 <?php include 'footer.php'; ?>
