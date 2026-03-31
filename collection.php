@@ -182,25 +182,26 @@ foreach ($attributeFilterKeys as $attributeKey) {
     .products-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 20px;
+        gap: 24px;
         align-items: stretch;
     }
 
     .product-card {
         position: relative;
-        border: 1px solid #eeeeee;
-        border-radius: 12px;
-        background: #fff;
+        border: 1px solid #dcdfe5;
+        border-radius: 0;
+        background: #f3f3f3;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         height: 100%;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        padding: 12px 12px 10px;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px rgba(31, 41, 55, 0.12);
     }
 
     .badge-promo {
@@ -221,10 +222,10 @@ foreach ($attributeFilterKeys as $attributeKey) {
 
     .product-image-wrap {
         width: 100%;
-        height: 300px;
+        height: 310px;
         padding: 0;
         margin: 0;
-        background: #fff;
+        background: #f3f3f3;
         overflow: hidden;
     }
 
@@ -232,73 +233,77 @@ foreach ($attributeFilterKeys as $attributeKey) {
         width: 100%;
         height: 100%;
         display: block;
-        object-fit: cover;
+        object-fit: contain;
         object-position: center;
     }
+
+    .product-price {
+        padding: 10px 0 0;
+        margin-top: 0;
+        border-top: 1px solid #cfd5dd;
+        text-align: center;
+    }
+
+    .product-price-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    color: #000;
+    font-size: 1.9rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.01em;
+}
+
+.product-price-badge span {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #000;
+    text-transform: uppercase;
+}
 
     .product-card-body {
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        gap: 3px;
-        padding: 12px 15px 6px;
-        flex-grow: 1;
+        gap: 6px;
+        padding: 8px 8px 0;
+        flex: 1;
     }
 
     .product-brand {
-        color: #7b8794;
-        font-size: 0.75rem;
-        letter-spacing: 0.06em;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
+    color: #2f3f56;
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.2;
+}
 
-    .product-name {
-        margin: 3px 0 6px;
-        font-size: 1rem;
-        line-height: 1.2;
-        color: #000;
-        font-weight: 900;
-        min-height: 2.4em;
-        text-transform: uppercase;
-    }
+.product-name {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    color: #000;
+    font-weight: 900;
+    min-height: 2.4em;
+    text-transform: uppercase;
+}
 
-    .product-short-description {
-        margin: 0 0 10px;
-        color: #66758a;
-        font-size: 0.78rem;
-        line-height: 1.35;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        min-height: 2.7em;
-        text-align: center;
-    }
-
-    .product-price {
-        padding: 0 15px 10px;
-        margin-top: auto;
-        text-align: center;
-    }
-
-    .product-price-badge {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 4px;
-        color: #10a5c8;
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1;
-        letter-spacing: 0;
-    }
-
-    .product-price-badge span {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #2f3f56;
-    }
+.product-short-description {
+    margin: 0;
+    color: #202938;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.7em;
+    text-align: center;
+}
 
     .product-card-actions {
         display: grid;
@@ -312,14 +317,14 @@ foreach ($attributeFilterKeys as $attributeKey) {
     .btn-view-product {
         width: 100%;
         display: inline-flex;
-        gap: 8px;
+        gap: 10px;
         justify-content: center;
         align-items: center;
         min-height: 50px;
         padding: 0 12px;
         border-radius: 8px;
-        border: 1px solid #3f4651;
-        background: #3f4651;
+        border: 1px solid #000;
+        background: #000;
         color: #fff;
         font-weight: 700;
         text-decoration: none;
@@ -327,14 +332,14 @@ foreach ($attributeFilterKeys as $attributeKey) {
         letter-spacing: 0.02em;
         text-transform: uppercase;
         text-align: center;
-        line-height: 1.15;
-        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+        line-height: 1.05;
+        transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
     }
 
     .btn-view-product:hover {
-        background: #343a44;
+        background: #111;
         color: #fff;
-        border-color: #343a44;
+        border-color: #111;
         transform: translateY(-1px);
     }
 
@@ -342,12 +347,12 @@ foreach ($attributeFilterKeys as $attributeKey) {
         width: 100%;
         min-height: 50px;
         display: inline-flex;
-        gap: 7px;
+        gap: 10px;
         justify-content: center;
         align-items: center;
-        border-radius: 8px;
-        border: 1px solid #f0b90b;
-        background: #f0b90b;
+        border-radius: 18px;
+        border: 1px solid #f2d54b;
+        background: #f2d54b;
         color: #111;
         cursor: pointer;
         font-size: 0.7rem;
@@ -355,16 +360,18 @@ foreach ($attributeFilterKeys as $attributeKey) {
         letter-spacing: 0.02em;
         text-transform: uppercase;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.05;
         transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
-        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+        box-shadow: none;
     }
 
     .btn-view-product span {
         display: block;
         text-align: center;
+        max-width: 155px;
     }
 
+    .btn-view-product i,
     .btn-cart-ready i {
         font-size: 0.95rem;
     }
@@ -373,15 +380,15 @@ foreach ($attributeFilterKeys as $attributeKey) {
         display: block;
         max-width: 105px;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.05;
         white-space: normal;
     }
 
     .btn-cart-ready:hover {
-        border-color: #d39f00;
+        border-color: #e0c12d;
         color: #111;
-        background: #ffd248;
-        box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.25);
+        background: #f6dd69;
+        box-shadow: none;
         transform: translateY(-1px);
     }
 
@@ -670,13 +677,17 @@ foreach ($attributeFilterKeys as $attributeKey) {
                     $prixFinal = $prixPromo ?: $prixRegulier;
                     $hasPromo = $prixPromo !== null || !empty($p['is_promo']);
                     ?>
-                    <div class="product-card">
+                                        <div class="product-card">
                         <?php if ($hasPromo): ?>
                             <div class="badge-promo">PROMO</div>
                         <?php endif; ?>
 
                         <div class="product-image-wrap">
                             <img src="<?= e(buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null)); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
+                        </div>
+
+                        <div class="product-price">
+                            <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
                         </div>
 
                         <div class="product-card-body">
@@ -686,10 +697,6 @@ foreach ($attributeFilterKeys as $attributeKey) {
                             <?php if (!empty($p['description_courte'])): ?>
                                 <p class="product-short-description"><?= nl2br(e($p['description_courte'])); ?></p>
                             <?php endif; ?>
-                        </div>
-
-                        <div class="product-price">
-                            <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
                         </div>
 
                         <div class="product-card-actions">
