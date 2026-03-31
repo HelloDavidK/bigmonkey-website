@@ -179,272 +179,109 @@ foreach ($attributeFilterKeys as $attributeKey) {
 ?>
 
 <style>
-    .products-grid {
+.products-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 24px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        max-width: 1200px;
+        margin: 0 auto;
         align-items: stretch;
     }
 
     .product-card {
-        position: relative;
-        border: 1px solid #dcdfe5;
-        border-radius: 0;
-        background: #f3f3f3;
+        border: 1px solid #eeeeee;
+        padding: 0 !important;
+        border-radius: 12px;
+        background: #fff;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        transition: transform 0.3s ease;
         height: 100%;
-        padding: 12px 12px 10px;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .product-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 18px rgba(31, 41, 55, 0.12);
-    }
-
-    .badge-promo {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        z-index: 3;
-        background: linear-gradient(135deg, #dc2626, #b91c1c);
-        color: #fff;
-        padding: 4px 9px;
-        border-radius: 999px;
-        font-size: 0.68rem;
-        font-weight: 800;
-        letter-spacing: 0.04em;
-        line-height: 1;
-        box-shadow: 0 4px 12px rgba(185, 28, 28, 0.28);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
     }
 
     .product-image-wrap {
         width: 100%;
-        height: 310px;
-        padding: 0;
         margin: 0;
-        background: #f3f3f3;
-        overflow: hidden;
     }
 
     .product-image-wrap img {
-        width: 100%;
-        height: 100%;
+        width: 100% !important;
+        height: auto !important;
         display: block;
-        object-fit: contain;
-        object-position: center;
     }
 
-    .product-price {
-        padding: 10px 0 0;
-        margin-top: 0;
-        border-top: 1px solid #cfd5dd;
+    .product-info {
+        padding: 15px !important;
         text-align: center;
-    }
-
-    .product-price-badge {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-    color: #000;
-    font-size: 1.9rem;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: 0.01em;
-}
-
-.product-price-badge span {
-    font-size: 0.95rem;
-    font-weight: 900;
-    color: #000;
-    text-transform: uppercase;
-}
-
-    .product-card-body {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 6px;
-        padding: 8px 8px 0;
-        flex: 1;
+        flex-grow: 1;
     }
 
     .product-brand {
-    color: #2f3f56;
-    font-size: 0.82rem;
-    letter-spacing: 0.05em;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 0;
-    line-height: 1.2;
-}
-
-.product-name {
-    margin: 0;
-    font-size: 1.05rem;
-    line-height: 1.2;
-    color: #000;
-    font-weight: 900;
-    min-height: 2.4em;
-    text-transform: uppercase;
-}
-
-.product-short-description {
-    margin: 0;
-    color: #202938;
-    font-size: 0.78rem;
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 2.7em;
-    text-align: center;
-}
-
-    .product-card-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: auto;
-        padding: 0 15px 15px;
-        width: 100%;
+        font-size: 11px;
+        color: #777777;
+        margin: 0 0 5px 0;
+        text-transform: uppercase;
+        font-weight: 700;
     }
 
-    .btn-view-product {
+    .product-name {
+        font-size: 16px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase;
+        margin: 5px 0 8px 0 !important;
+        color: #000;
+        line-height: 1.2;
+    }
+
+    .product-desc {
+        font-size: 12px !important;
+        color: #777777;
+        line-height: 1.4;
+        margin: 0 0 12px 0 !important;
+        min-height: 34px;
+    }
+
+    .price {
+        font-size: 18px !important;
+        font-weight: 900;
+        color: #000;
+        margin-top: auto;
+        margin-bottom: 15px !important;
+    }
+
+    .add-to-cart {
         width: 100%;
-        display: inline-flex;
-        gap: 10px;
-        justify-content: center;
-        align-items: center;
-        min-height: 50px;
-        padding: 0 12px;
-        border-radius: 8px;
-        border: 1px solid #000;
         background: #000;
         color: #fff;
-        font-weight: 700;
-        text-decoration: none;
-        font-size: 0.7rem;
-        letter-spacing: 0.02em;
+        border: none;
+        padding: 15px !important;
+        font-weight: 800;
+        font-size: 12px;
         text-transform: uppercase;
-        text-align: center;
-        line-height: 1.05;
-        transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-    }
-
-    .btn-view-product:hover {
-        background: #111;
-        color: #fff;
-        border-color: #111;
-        transform: translateY(-1px);
-    }
-
-    .btn-cart-ready {
-        width: 100%;
-        min-height: 50px;
-        display: inline-flex;
-        gap: 10px;
-        justify-content: center;
-        align-items: center;
-        border-radius: 18px;
-        border: 1px solid #f2d54b;
-        background: #f2d54b;
-        color: #111;
         cursor: pointer;
-        font-size: 0.7rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-        text-align: center;
-        line-height: 1.05;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.15s ease;
-        box-shadow: none;
+        transition: 0.2s;
     }
 
-    .btn-view-product span {
-        display: block;
-        text-align: center;
-        max-width: 155px;
+    .add-to-cart:active {
+        background: #333;
     }
 
-    .btn-view-product i,
-    .btn-cart-ready i {
-        font-size: 0.95rem;
-    }
-
-    .btn-cart-ready span {
-        display: block;
-        max-width: 105px;
-        text-align: center;
-        line-height: 1.05;
-        white-space: normal;
-    }
-
-    .btn-cart-ready:hover {
-        border-color: #e0c12d;
-        color: #111;
-        background: #f6dd69;
-        box-shadow: none;
-        transform: translateY(-1px);
-    }
-
-    @media (max-width: 767px) {
+    @media screen and (min-width: 769px) {
         .products-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .product-card {
-            border-radius: 14px;
-        }
-
-        .product-image-wrap {
-            height: 220px;
-            padding: 0;
-        }
-
-        .product-card-body {
-            min-height: auto;
-            gap: 3px;
-            padding: 10px 10px 5px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
         }
 
         .product-name {
-            font-size: 0.92rem;
-        }
-
-        .product-short-description {
-            font-size: 0.78rem;
-        }
-
-        .product-price {
-            padding: 0 10px 8px;
-        }
-
-        .product-card-actions {
-            padding: 0 10px 10px;
-            gap: 6px;
-        }
-
-        .btn-view-product,
-        .btn-cart-ready {
-            min-height: 46px;
-        }
-
-        .btn-view-product {
-            font-size: 0.78rem;
-        }
-
-        .btn-cart-ready {
-            font-size: 0.64rem;
-        }
-
-        .btn-cart-ready span {
-            max-width: 86px;
+            font-size: 18px !important;
         }
     }
 </style>
@@ -471,7 +308,7 @@ foreach ($attributeFilterKeys as $attributeKey) {
 
                 <div class="slide">
                     <a href="collection.php?cat=bons-plans" class="banner-link banner-desktop">
-                        <img src="img/slider2-pc.jpg" alt="Promotions Matériel">
+                        <img src="img/slider2-pc.jpg" alt="Promotions Matriel">
                     </a>
                     <a href="collection.php?cat=bons-plans" class="banner-link banner-mobile">
                         <img src="img/slider2-mobile.jpg" alt="Promotions Matériel Mobile">
@@ -675,40 +512,26 @@ foreach ($attributeFilterKeys as $attributeKey) {
                     $prixRegulier = (float) ($p['prix_regulier'] ?? 0);
                     $prixPromo = isset($p['prix_promo']) && $p['prix_promo'] !== null ? (float) $p['prix_promo'] : null;
                     $prixFinal = $prixPromo ?: $prixRegulier;
-                    $hasPromo = $prixPromo !== null || !empty($p['is_promo']);
                     ?>
-                                        <div class="product-card">
-                        <?php if ($hasPromo): ?>
-                            <div class="badge-promo">PROMO</div>
-                        <?php endif; ?>
-
-                        <div class="product-image-wrap">
+                    <div class="product-card">
+                        <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="product-image-wrap">
                             <img src="<?= e(buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null)); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
-                        </div>
+                        </a>
 
-                        <div class="product-price">
-                            <span class="product-price-badge"><?= number_format($prixFinal, 0, '.', ' '); ?> <span>Ar</span></span>
-                        </div>
-
-                        <div class="product-card-body">
+                        <div class="product-info">
                             <span class="product-brand"><?= e($p['marque'] ?? 'Big Monkey'); ?></span>
                             <h3 class="product-name"><?= e($p['nom'] ?? 'Produit'); ?></h3>
 
-                            <?php if (!empty($p['description_courte'])): ?>
-                                <p class="product-short-description"><?= nl2br(e($p['description_courte'])); ?></p>
-                            <?php endif; ?>
+                            <p class="product-desc">
+                                <?= !empty($p['description_courte']) ? nl2br(e($p['description_courte'])) : 'Découvrez ce produit sélectionné par Big Monkey.'; ?>
+                            </p>
+
+                            <div class="price"><?= number_format($prixFinal, 0, '.', ' '); ?> Ar</div>
                         </div>
 
-                        <div class="product-card-actions">
-                            <a href="produit.php?slug=<?= urlencode((string) ($p['slug'] ?? '')); ?>" class="btn-view-product">
-                                <i class="fas fa-eye" aria-hidden="true"></i>
-                                <span>Voir le produit</span>
-                            </a>
-                            <button type="button" class="btn-cart-ready" aria-label="Ajouter au panier">
-                                <i class="fas fa-shopping-cart" aria-hidden="true"></i>
-                                <span>Ajouter au panier</span>
-                            </button>
-                        </div>
+                        <button type="button" class="add-to-cart" aria-label="Ajouter au panier">
+                            AJOUTER AU PANIER
+                        </button>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
