@@ -351,6 +351,10 @@ include 'header.php';
         .delivery-checkbox-label input[type="checkbox"] {
             margin-top: 0 !important;
         }
+
+        .summary-total-amount {
+            font-size: 1.85rem;
+        }
     }
 </style>
 
@@ -458,7 +462,9 @@ include 'header.php';
                         <p style="margin:0 0 4px;">Quantité : <?= $qty; ?></p>
                         <p style="margin:0 0 8px;">Sous-total : <strong><?= number_format($lineTotal, 0, '.', ' '); ?> Ar</strong></p>
                         <?php if (!empty($item['boosters']) && is_array($item['boosters'])): ?>
-                            <ul style="margin:0 0 10px 17px;padding:0;">
+                            <div style="margin:10px 0 10px;">
+                                <div style="font-weight:800;margin-bottom:6px;">Boosters</div>
+                                <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
                                 <?php foreach ($item['boosters'] as $boosterId => $boosterQty): ?>
                                     <?php
                                     $boosterIdInt = (int) $boosterId;
@@ -473,8 +479,8 @@ include 'header.php';
                                     $boosterLine = $boosterPrice * $boosterQtyInt;
                                     $total += $boosterLine;
                                     ?>
-                                    <li style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                                        <span style="display:block;min-width:0;max-width:calc(100% - 30px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.92rem;">Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
+                                    <li style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                                        <span style="display:block;min-width:0;flex:1;font-size:0.95rem;font-weight:700;line-height:1.3;word-break:break-word;"><?= e($booster['nom']); ?> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
                                         <form method="post" action="panier.php" style="margin:0;">
                                             <input type="hidden" name="action" value="remove_booster">
                                             <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
@@ -483,7 +489,8 @@ include 'header.php';
                                         </form>
                                     </li>
                                 <?php endforeach; ?>
-                            </ul>
+                                </ul>
+                            </div>
                         <?php endif; ?>
 
                         <form method="post" action="panier.php">
@@ -496,7 +503,7 @@ include 'header.php';
 
                 <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,204,0,0.45);padding-top:14px;margin-top:10px;">
                     <span style="font-weight:700;">Total</span>
-                    <span style="font-size:1.3rem;font-weight:900;color:#ffcc00;"><?= number_format($total, 0, '.', ' '); ?> Ar</span>
+                    <span class="summary-total-amount" style="font-size:clamp(1.15rem,5vw,1.9rem);font-weight:900;color:#ffcc00;text-align:right;"><?= number_format($total, 0, '.', ' '); ?> Ar</span>
                 </div>
                 <p style="margin:8px 0 0;font-size:0.9rem;opacity:0.9;">* Les frais de livraison seront communiqués ultérieurement.</p>
             <?php endif; ?>
