@@ -4,8 +4,13 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once 'config.php'; // Utilisation de require_once pour plus de sécurité
 
-// Simulation du compteur panier
-$cart_count = isset($_SESSION['cart']) ? count($_SESSION['cart']) : 0;
+// Compteur panier (somme des quantités)
+$cart_count = 0;
+if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $item) {
+        $cart_count += max(1, (int) ($item['qty'] ?? 1));
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
