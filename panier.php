@@ -36,6 +36,20 @@ function buildSafeRedirectTarget(?string $target): string
     return $value;
 }
 
+function getCartTotalQuantity(array $cart): int
+{
+    $count = 0;
+    foreach ($cart as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $count += max(1, (int) ($item['qty'] ?? 1));
+    }
+
+    return $count;
+}
+
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -44,6 +58,7 @@ $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
 if ($method === 'POST') {
     $action = trim((string) ($_POST['action'] ?? ''));
+    $isAjaxRequest = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
 
     if ($action === 'add_bundle') {
         $mainProductId = sanitizePositiveInt($_POST['main_product_id'] ?? 0, 0);
@@ -79,6 +94,16 @@ if ($method === 'POST') {
                     $_SESSION['cart'][$bundleKey]['boosters'][$boosterIdInt] += $qtyInt;
                 }
             }
+        }
+
+        if ($isAjaxRequest) {
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Produit ajouté au panier.',
+                'cart_count' => getCartTotalQuantity($_SESSION['cart']),
+            ]);
+            exit;
         }
 
         $separator = strpos($redirectTo, '?') === false ? '?' : '&';
@@ -216,4 +241,3 @@ include 'header.php';
 </main>
 
 <?php include 'footer.php'; ?>
-produit.php
