@@ -694,9 +694,15 @@ function renderCollectionResultsHtml(array $context, array $productsData, array 
                         <div class="price"><?= number_format($prixFinal, 0, '.', ' '); ?> Ar</div>
                     </div>
 
-                    <button type="button" class="add-to-cart" aria-label="Ajouter au panier">
-                        AJOUTER AU PANIER
-                    </button>
+                    <form method="post" action="panier.php" class="add-to-cart-form">
+                        <input type="hidden" name="action" value="add_bundle">
+                        <input type="hidden" name="main_product_id" value="<?= (int) ($p['id'] ?? 0); ?>">
+                        <input type="hidden" name="qty_main" value="1">
+                        <input type="hidden" name="redirect_to" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? 'collection.php')); ?>">
+                        <button type="submit" class="add-to-cart" aria-label="Ajouter <?= e($p['nom'] ?? 'ce produit'); ?> au panier">
+                            AJOUTER AU PANIER
+                        </button>
+                    </form>
                 </div>
             <?php endforeach; ?>
         <?php else: ?>
