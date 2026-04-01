@@ -2048,7 +2048,7 @@ if ($slug !== '') {
                     <form method="post" action="panier.php" class="purchase-bundle-form">
                         <input type="hidden" name="action" value="add_bundle">
                         <input type="hidden" name="main_product_id" value="<?= (int) $product['id']; ?>">
-
+                        <input type="hidden" name="redirect_to" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? 'produit.php')); ?>">   
                         <div class="purchase-card">
                             <div class="purchase-main-inline">
                                 <div class="purchase-product-thumb">
