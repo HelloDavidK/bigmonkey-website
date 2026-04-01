@@ -54,6 +54,50 @@ if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
+$user = null;
+$userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+if ($userId > 0) {
+    $userStmt = $pdo->prepare('SELECT * FROM utilisateurs WHERE id = ? LIMIT 1');
+    $userStmt->execute([$userId]);
+    $user = $userStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/**
+ * @param array<string, mixed>|null $userData
+ * @return array<int, array<string, string>>
+ */
+function extractSavedAddresses(?array $userData): array
+{
+    if (!$userData) {
+        return [];
+    }
+
+    $addresses = [];
+    for ($i = 1; $i <= 2; $i++) {
+        $line = trim((string) ($userData['adresse_' . $i] ?? ''));
+        $quartier = trim((string) ($userData['quartier_' . $i] ?? ''));
+        $ville = trim((string) ($userData['ville_' . $i] ?? ''));
+
+        if ($line === '') {
+            continue;
+        }
+
+        $addresses[] = [
+            'key' => 'addr' . $i,
+            'label' => $i === 1 ? 'Adresse Principale' : 'Deuxième Adresse',
+            'line' => $line,
+            'quartier' => $quartier,
+            'ville' => $ville,
+        ];
+    }
+
+    return $addresses;
+}
+
+$savedAddresses = extractSavedAddresses($user);
+$selectedAddressKey = (string) ($_SESSION['selected_delivery_address'] ?? (!empty($savedAddresses) ? $savedAddresses[0]['key'] : ''));
+$shippingMessage = '';
+
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
 
 if ($method === 'POST') {
@@ -120,6 +164,79 @@ if ($method === 'POST') {
         header('Location: panier.php?removed=1');
         exit;
     }
+
+    if ($action === 'choose_delivery_address') {
+        $selected = trim((string) ($_POST['delivery_address'] ?? ''));
+        if ($selected !== '') {
+            $_SESSION['selected_delivery_address'] = $selected;
+        }
+        header('Location: panier.php');
+        exit;
+    }
+
+    if ($action === 'save_delivery_address') {
+        $line = trim((string) ($_POST['line'] ?? ''));
+        $quartier = trim((string) ($_POST['quartier'] ?? ''));
+        $ville = trim((string) ($_POST['ville'] ?? ''));
+        $saveForFuture = isset($_POST['save_for_future']) && $_POST['save_for_future'] === '1';
+
+        if ($line === '') {
+            $_SESSION['shipping_message'] = 'Veuillez renseigner une adresse valide.';
+            header('Location: panier.php');
+            exit;
+        }
+
+        $_SESSION['temp_delivery_address'] = [
+            'key' => 'temp',
+            'label' => 'Adresse de cette commande',
+            'line' => $line,
+            'quartier' => $quartier,
+            'ville' => $ville,
+        ];
+        $_SESSION['selected_delivery_address'] = 'temp';
+
+        if ($userId > 0 && $saveForFuture) {
+            $slot = empty($user['adresse_1']) ? 1 : 2;
+            if (!empty($user['adresse_1']) && !empty($user['adresse_2'])) {
+                $slot = 1;
+            }
+
+            $stmt = $pdo->prepare("UPDATE utilisateurs SET adresse_{$slot} = ?, quartier_{$slot} = ?, ville_{$slot} = ? WHERE id = ?");
+            $stmt->execute([$line, $quartier, $ville, $userId]);
+            $_SESSION['shipping_message'] = 'Adresse enregistrée dans votre profil.';
+        } else {
+            $_SESSION['shipping_message'] = 'Adresse utilisée pour cette commande.';
+        }
+
+        header('Location: panier.php');
+        exit;
+    }
+}
+
+if (isset($_SESSION['shipping_message'])) {
+    $shippingMessage = (string) $_SESSION['shipping_message'];
+    unset($_SESSION['shipping_message']);
+}
+
+$savedAddresses = extractSavedAddresses($user);
+$activeAddress = null;
+
+if ($selectedAddressKey === 'temp' && isset($_SESSION['temp_delivery_address']) && is_array($_SESSION['temp_delivery_address'])) {
+    $activeAddress = $_SESSION['temp_delivery_address'];
+}
+
+if ($activeAddress === null) {
+    foreach ($savedAddresses as $address) {
+        if ($address['key'] === $selectedAddressKey) {
+            $activeAddress = $address;
+            break;
+        }
+    }
+}
+
+if ($activeAddress === null && !empty($savedAddresses)) {
+    $activeAddress = $savedAddresses[0];
+    $_SESSION['selected_delivery_address'] = $activeAddress['key'];
 }
 
 $cartItems = $_SESSION['cart'];
@@ -168,76 +285,131 @@ $total = 0.0;
 include 'header.php';
 ?>
 
-<main style="max-width:960px;margin:30px auto;padding:0 16px;">
-    <h1>Mon panier</h1>
+<main style="max-width:1200px;margin:34px auto;padding:0 16px 60px;">
+    <h1 style="margin:0 0 20px;text-transform:uppercase;font-weight:900;">Finaliser ma commande</h1>
 
-    <?php if (isset($_GET['added'])): ?>
-        <p style="padding:10px 12px;background:#ecfdf5;border:1px solid #10b981;border-radius:8px;">Produit ajouté au panier.</p>
-    <?php endif; ?>
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;">
+        <section style="border:1px solid #eee;padding:20px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,0.03);background:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ffcc00;margin-bottom:15px;padding-bottom:5px;">
+                <h2 style="font-size:1.1rem;margin:0;text-transform:uppercase;">Infos client & livraison</h2>
+            </div>
 
-    <?php if (isset($_GET['removed'])): ?>
-        <p style="padding:10px 12px;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;">Produit retiré du panier.</p>
-    <?php endif; ?>
+            <?php if ($user): ?>
+                <p style="margin:8px 0;"><i class="fas fa-user" style="width:20px;color:#ffcc00;"></i> <strong>Pseudo :</strong> <?= e((string) ($user['pseudo'] ?? '')); ?></p>
+            <?php else: ?>
+                <p style="margin:8px 0;color:#b91c1c;"><strong>Connectez-vous</strong> pour lier l'adresse à votre profil.</p>
+            <?php endif; ?>
 
-    <?php if (empty($cartItems)): ?>
-        <p>Votre panier est vide.</p>
-    <?php else: ?>
-        <?php foreach ($cartItems as $itemKey => $item): ?>
-            <?php
-            $productId = (int) ($item['product_id'] ?? 0);
-            $qty = max(1, (int) ($item['qty'] ?? 1));
-            $product = $productMap[$productId] ?? null;
-            if (!$product) {
-                continue;
-            }
+            <?php if ($shippingMessage !== ''): ?>
+                <p style="padding:10px 12px;background:#ecfdf5;border:1px solid #10b981;border-radius:8px;"><?= e($shippingMessage); ?></p>
+            <?php endif; ?>
 
-            $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
-                ? (float) $product['prix_promo']
-                : (float) $product['prix_regulier'];
-
-            $lineTotal = $price * $qty;
-            $total += $lineTotal;
-            ?>
-            <article style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-                <h2 style="margin:0 0 8px;"><?= e($product['nom']); ?></h2>
-                <p style="margin:0 0 6px;">Quantité: <?= $qty; ?></p>
-                <p style="margin:0 0 6px;">Sous-total: <?= number_format($lineTotal, 0, '.', ' '); ?> Ar</p>
-
-                <?php if (!empty($item['boosters']) && is_array($item['boosters'])): ?>
-                    <ul>
-                        <?php foreach ($item['boosters'] as $boosterId => $boosterQty): ?>
-                            <?php
-                            $boosterIdInt = (int) $boosterId;
-                            $boosterQtyInt = (int) $boosterQty;
-                            if ($boosterQtyInt <= 0 || !isset($boosterMap[$boosterIdInt])) {
-                                continue;
-                            }
-                            $booster = $boosterMap[$boosterIdInt];
-                            $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
-                                ? (float) $booster['prix_promo']
-                                : (float) $booster['prix_regulier'];
-
-                            $boosterLine = $boosterPrice * $boosterQtyInt;
-                            $total += $boosterLine;
-                            ?>
-                            <li>
-                                Booster <?= e($booster['nom']); ?> x <?= $boosterQtyInt; ?>
-                                (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
-
-                <form method="post" action="panier.php" style="margin-top:10px;">
-                    <input type="hidden" name="action" value="remove_item">
-                    <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
-                    <button type="submit" style="background:#111;color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;">Retirer</button>
+            <?php if (count($savedAddresses) >= 2): ?>
+                <form method="post" action="panier.php" style="margin:15px 0;">
+                    <input type="hidden" name="action" value="choose_delivery_address">
+                    <p style="font-weight:700;margin-bottom:10px;">Choisissez une adresse de livraison :</p>
+                    <?php foreach ($savedAddresses as $address): ?>
+                        <label style="display:block;background:#fdfdfd;border:1px solid #f5f5f5;padding:12px;border-radius:12px;margin-bottom:10px;cursor:pointer;">
+                            <input type="radio" name="delivery_address" value="<?= e($address['key']); ?>" <?= $activeAddress && $activeAddress['key'] === $address['key'] ? 'checked' : ''; ?>>
+                            <strong style="color:#f0b400;"><?= e($address['label']); ?></strong><br>
+                            <?= e($address['line']); ?><br><?= e($address['quartier']); ?>, <?= e($address['ville']); ?>
+                        </label>
+                    <?php endforeach; ?>
+                    <button type="submit" style="width:100%;background:#ffcc00;border:none;padding:12px;border-radius:30px;font-weight:bold;cursor:pointer;">Utiliser cette adresse</button>
                 </form>
-            </article>
-        <?php endforeach; ?>
+            <?php elseif (!empty($savedAddresses)): ?>
+                <?php $onlyAddress = $savedAddresses[0]; ?>
+                <div style="margin-top:15px;background:#fdfdfd;padding:15px;border-radius:15px;border:1px solid #f5f5f5;">
+                    <span style="font-weight:bold;color:#ffcc00;"><?= e($onlyAddress['label']); ?></span>
+                    <p style="margin:6px 0 0;line-height:1.4;"><?= e($onlyAddress['line']); ?><br><?= e($onlyAddress['quartier']); ?>, <?= e($onlyAddress['ville']); ?></p>
+                </div>
+            <?php else: ?>
+                <form method="post" action="panier.php" style="margin-top:15px;background:#fff;padding:15px;border:1px solid #eee;border-radius:15px;">
+                    <input type="hidden" name="action" value="save_delivery_address">
+                    <p style="font-weight:700;margin:0 0 12px;">Aucune adresse enregistrée : ajoutez votre adresse de livraison.</p>
+                    <input type="text" name="line" placeholder="Adresse (Lot...)" required style="width:100%;padding:12px;margin-bottom:10px;border-radius:10px;border:1px solid #ddd;">
+                    <div style="display:flex;gap:10px;">
+                        <input type="text" name="quartier" placeholder="Quartier" style="flex:1;padding:12px;border-radius:10px;border:1px solid #ddd;">
+                        <input type="text" name="ville" placeholder="Ville" style="flex:1;padding:12px;border-radius:10px;border:1px solid #ddd;">
+                    </div>
+                    <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:0.95rem;">
+                        <input type="checkbox" name="save_for_future" value="1">
+                        Utiliser cette adresse pour mes prochaines commandes.
+                    </label>
+                    <button type="submit" style="width:100%;background:#ffcc00;border:none;padding:12px;border-radius:30px;margin-top:10px;font-weight:bold;cursor:pointer;">Valider l'adresse</button>
+                </form>
+            <?php endif; ?>
+        </section>
 
-        <p style="font-size:20px;font-weight:700;">Total: <?= number_format($total, 0, '.', ' '); ?> Ar</p>
-    <?php endif; ?>
+        <section style="background:linear-gradient(160deg,#10131a 0%,#1c2433 100%);color:#fff;border-radius:20px;padding:20px;border:1px solid rgba(255,204,0,0.35);box-shadow:0 10px 24px rgba(0,0,0,0.24);">
+            <h2 style="margin:0 0 14px;text-transform:uppercase;color:#ffcc00;">Récapitulatif panier</h2>
+
+            <?php if (isset($_GET['added'])): ?>
+                <p style="padding:10px 12px;background:rgba(16,185,129,0.2);border:1px solid #10b981;border-radius:8px;">Produit ajouté au panier.</p>
+            <?php endif; ?>
+            <?php if (isset($_GET['removed'])): ?>
+                <p style="padding:10px 12px;background:rgba(239,68,68,0.2);border:1px solid #ef4444;border-radius:8px;">Produit retiré du panier.</p>
+            <?php endif; ?>
+
+            <?php if (empty($cartItems)): ?>
+                <p>Votre panier est vide.</p>
+            <?php else: ?>
+                <?php foreach ($cartItems as $itemKey => $item): ?>
+                    <?php
+                    $productId = (int) ($item['product_id'] ?? 0);
+                    $qty = max(1, (int) ($item['qty'] ?? 1));
+                    $product = $productMap[$productId] ?? null;
+                    if (!$product) {
+                        continue;
+                    }
+
+                    $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
+                        ? (float) $product['prix_promo']
+                        : (float) $product['prix_regulier'];
+                    $lineTotal = $price * $qty;
+                    $total += $lineTotal;
+                    ?>
+                    <article style="border:1px solid rgba(255,255,255,0.13);border-radius:12px;padding:14px 14px;margin-bottom:12px;background:rgba(255,255,255,0.03);">
+                        <h3 style="margin:0 0 6px;font-size:1.05rem;font-weight:900;"><?= e($product['nom']); ?></h3>
+                        <p style="margin:0 0 4px;">Quantité : <?= $qty; ?></p>
+                        <p style="margin:0 0 8px;">Sous-total : <strong><?= number_format($lineTotal, 0, '.', ' '); ?> Ar</strong></p>
+                        <?php if (!empty($item['boosters']) && is_array($item['boosters'])): ?>
+                            <ul style="margin:0 0 10px 17px;padding:0;">
+                                <?php foreach ($item['boosters'] as $boosterId => $boosterQty): ?>
+                                    <?php
+                                    $boosterIdInt = (int) $boosterId;
+                                    $boosterQtyInt = (int) $boosterQty;
+                                    if ($boosterQtyInt <= 0 || !isset($boosterMap[$boosterIdInt])) {
+                                        continue;
+                                    }
+                                    $booster = $boosterMap[$boosterIdInt];
+                                    $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
+                                        ? (float) $booster['prix_promo']
+                                        : (float) $booster['prix_regulier'];
+                                    $boosterLine = $boosterPrice * $boosterQtyInt;
+                                    $total += $boosterLine;
+                                    ?>
+                                    <li>Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+
+                        <form method="post" action="panier.php">
+                            <input type="hidden" name="action" value="remove_item">
+                            <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
+                            <button type="submit" style="background:#fff;color:#111;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700;">Retirer</button>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,204,0,0.45);padding-top:14px;margin-top:10px;">
+                    <span style="font-weight:700;">Total</span>
+                    <span style="font-size:1.3rem;font-weight:900;color:#ffcc00;"><?= number_format($total, 0, '.', ' '); ?> Ar</span>
+                </div>
+                <p style="margin:8px 0 0;font-size:0.9rem;opacity:0.9;">* Les frais de livraison seront communiqués ultérieurement.</p>
+            <?php endif; ?>
+        </section>
+    </div>
 </main>
 
 <?php include 'footer.php'; ?>
