@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             contactBubble.classList.toggle('active');
-        });
+            });
 
         document.addEventListener('click', function(e) {
             if (!contactBubble.contains(e.target) && e.target !== contactTrigger) {
@@ -167,6 +167,74 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    /* =========================================
+       8. AJOUT PANIER SANS REDIRECTION
+       ========================================= */
+    document.addEventListener('submit', async function(event) {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        const action = form.getAttribute('action') || '';
+        if (action.indexOf('panier.php') === -1) {
+            return;
+        }
+
+        const formData = new FormData(form);
+        if (String(formData.get('action') || '') !== 'add_bundle') {
+            return;
+        }
+
+        event.preventDefault();
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton ? submitButton.textContent : '';
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Ajout...';
+        }
+
+        try {
+            const response = await fetch('panier.php', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Erreur HTTP');
+            }
+
+            const data = await response.json();
+            if (!data || data.success !== true) {
+                throw new Error('Réponse invalide');
+            }
+
+            const badge = document.querySelector('.cart-badge-new');
+            if (badge && Number.isFinite(Number(data.cart_count))) {
+                badge.textContent = String(data.cart_count);
+            }
+
+            if (submitButton) {
+                submitButton.textContent = 'Ajouté ✓';
+                window.setTimeout(function() {
+                    submitButton.textContent = originalText || 'AJOUTER AU PANIER';
+                    submitButton.disabled = false;
+                }, 900);
+            }
+        } catch (error) {
+            if (submitButton) {
+                submitButton.textContent = originalText || 'AJOUTER AU PANIER';
+                submitButton.disabled = false;
+            }
+        }
+    });
 });
 /* =========================================
    8. FONCTIONS GLOBALES (SLIDER & FILTRES)
