@@ -479,7 +479,7 @@ include 'header.php';
                                             <input type="hidden" name="action" value="remove_booster">
                                             <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
                                             <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
-                                            <button type="submit" aria-label="Retirer ce booster" style="width:26px;height:26px;border:none;border-radius:50%;background:#fff;color:#111;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+                                            <button type="submit" aria-label="Retirer ce booster" style="width:22px;height:22px;border:none;border-radius:50%;background:#fff;color:#111;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;margin-left:4px;">✕</button>
                                         </form>
                                     </li>
                                 <?php endforeach; ?>
