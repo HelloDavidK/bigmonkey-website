@@ -473,13 +473,13 @@ include 'header.php';
                                     $boosterLine = $boosterPrice * $boosterQtyInt;
                                     $total += $boosterLine;
                                     ?>
-                                    <li style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                                        <span style="display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
+                                    <li style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                                        <span style="display:block;min-width:0;max-width:calc(100% - 30px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.92rem;">Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
                                         <form method="post" action="panier.php" style="margin:0;">
                                             <input type="hidden" name="action" value="remove_booster">
                                             <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
                                             <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
-                                            <button type="submit" aria-label="Retirer ce booster" style="width:22px;height:22px;border:none;border-radius:50%;background:#fff;color:#111;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;margin-left:4px;">✕</button>
+                                            <button type="submit" aria-label="Retirer ce booster" style="width:20px;height:20px;border:none;border-radius:50%;background:#fff;color:#111;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;">✕</button>
                                         </form>
                                     </li>
                                 <?php endforeach; ?>
