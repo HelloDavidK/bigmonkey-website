@@ -250,6 +250,167 @@ if ($method === 'POST') {
         header('Location: panier.php');
         exit;
     }
+
+    if ($action === 'place_order') {
+        if (empty($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+            $_SESSION['shipping_message'] = 'Votre panier est vide.';
+            header('Location: panier.php');
+            exit;
+        }
+
+        $currentUser = $user;
+        $currentAddresses = extractSavedAddresses($currentUser);
+        $currentSelectedAddressKey = (string) ($_SESSION['selected_delivery_address'] ?? (!empty($currentAddresses) ? $currentAddresses[0]['key'] : ''));
+        $currentAddress = null;
+
+        if (
+            $currentSelectedAddressKey === 'temp'
+            && isset($_SESSION['temp_delivery_address'])
+            && is_array($_SESSION['temp_delivery_address'])
+        ) {
+            $currentAddress = $_SESSION['temp_delivery_address'];
+        }
+
+        if ($currentAddress === null) {
+            foreach ($currentAddresses as $address) {
+                if ($address['key'] === $currentSelectedAddressKey) {
+                    $currentAddress = $address;
+                    break;
+                }
+            }
+        }
+
+        if ($currentAddress === null) {
+            $_SESSION['shipping_message'] = 'Veuillez d’abord renseigner une adresse de livraison.';
+            header('Location: panier.php');
+            exit;
+        }
+
+        if ($userId <= 0) {
+            $_SESSION['shipping_message'] = 'Veuillez vous connecter pour valider la commande.';
+            header('Location: compte.php');
+            exit;
+        }
+
+        $cartItemsForOrder = $_SESSION['cart'];
+        $productIdsForOrder = [];
+        $boosterIdsForOrder = [];
+
+        foreach ($cartItemsForOrder as $cartItem) {
+            $productId = (int) ($cartItem['product_id'] ?? 0);
+            if ($productId > 0) {
+                $productIdsForOrder[] = $productId;
+            }
+
+            $boosters = $cartItem['boosters'] ?? [];
+            if (is_array($boosters)) {
+                foreach ($boosters as $boosterId => $qty) {
+                    if ((int) $boosterId > 0 && (int) $qty > 0) {
+                        $boosterIdsForOrder[] = (int) $boosterId;
+                    }
+                }
+            }
+        }
+
+        $orderProductMap = [];
+        if (!empty($productIdsForOrder)) {
+            $placeholders = implode(',', array_fill(0, count($productIdsForOrder), '?'));
+            $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
+            $stmt->execute(array_values(array_unique($productIdsForOrder)));
+
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $orderProductMap[(int) $row['id']] = $row;
+            }
+        }
+
+        $orderBoosterMap = [];
+        if (!empty($boosterIdsForOrder)) {
+            $placeholders = implode(',', array_fill(0, count($boosterIdsForOrder), '?'));
+            $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
+            $stmt->execute(array_values(array_unique($boosterIdsForOrder)));
+
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $orderBoosterMap[(int) $row['id']] = $row;
+            }
+        }
+
+        $orderLines = [];
+        $orderTotal = 0.0;
+
+        foreach ($cartItemsForOrder as $cartItem) {
+            $productId = (int) ($cartItem['product_id'] ?? 0);
+            $qty = max(1, (int) ($cartItem['qty'] ?? 1));
+            $product = $orderProductMap[$productId] ?? null;
+
+            if (!$product) {
+                continue;
+            }
+
+            $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
+                ? (float) $product['prix_promo']
+                : (float) $product['prix_regulier'];
+            $lineTotal = $price * $qty;
+            $orderTotal += $lineTotal;
+
+            $lineBoosters = [];
+            if (!empty($cartItem['boosters']) && is_array($cartItem['boosters'])) {
+                foreach ($cartItem['boosters'] as $boosterId => $boosterQty) {
+                    $boosterIdInt = (int) $boosterId;
+                    $boosterQtyInt = (int) $boosterQty;
+
+                    if ($boosterQtyInt <= 0 || !isset($orderBoosterMap[$boosterIdInt])) {
+                        continue;
+                    }
+
+                    $booster = $orderBoosterMap[$boosterIdInt];
+                    $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
+                        ? (float) $booster['prix_promo']
+                        : (float) $booster['prix_regulier'];
+                    $boosterLine = $boosterPrice * $boosterQtyInt;
+                    $orderTotal += $boosterLine;
+
+                    $lineBoosters[] = [
+                        'name' => (string) ($booster['nom'] ?? 'Booster'),
+                        'qty' => $boosterQtyInt,
+                        'line_total' => $boosterLine,
+                    ];
+                }
+            }
+
+            $orderLines[] = [
+                'name' => (string) ($product['nom'] ?? 'Produit'),
+                'qty' => $qty,
+                'line_total' => $lineTotal,
+                'boosters' => $lineBoosters,
+            ];
+        }
+
+        if (empty($orderLines)) {
+            $_SESSION['shipping_message'] = 'Impossible de valider la commande avec les produits actuels.';
+            header('Location: panier.php');
+            exit;
+        }
+
+        $order = [
+            'order_number' => 'CMD-' . date('Ymd-His') . '-' . random_int(100, 999),
+            'status' => 'En attente',
+            'created_at' => date('d/m/Y H:i'),
+            'address' => $currentAddress,
+            'lines' => $orderLines,
+            'total' => $orderTotal,
+        ];
+
+        if (!isset($_SESSION['orders'][$userId]) || !is_array($_SESSION['orders'][$userId])) {
+            $_SESSION['orders'][$userId] = [];
+        }
+        $_SESSION['orders'][$userId][] = $order;
+
+        unset($_SESSION['cart'], $_SESSION['temp_delivery_address'], $_SESSION['selected_delivery_address']);
+        $_SESSION['cart'] = [];
+
+        header('Location: commandes.php?ordered=1');
+        exit;
+    }
 }
 
 if (isset($_SESSION['shipping_message'])) {
@@ -381,7 +542,13 @@ include 'header.php';
                     <button type="submit" style="width:100%;background:#ffcc00;border:none;padding:10px;border-radius:24px;font-weight:700;cursor:pointer;">Enregistrer mes coordonnées</button>
                 </form>
             <?php else: ?>
-                <p style="margin:8px 0;color:#b91c1c;"><strong>Connectez-vous</strong> pour lier l'adresse à votre profil.</p>
+                <div style="margin:8px 0 12px;padding:12px;border:1px solid #fecaca;border-radius:12px;background:#fff7ed;">
+                    <p style="margin:0 0 8px;color:#b91c1c;"><strong>Connectez-vous</strong> pour lier l'adresse à votre profil et finaliser plus vite vos prochaines commandes.</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <a href="compte.php" style="display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;background:#ffcc00;color:#111827;border-radius:999px;font-weight:800;text-decoration:none;">Se connecter</a>
+                        <a href="compte.php#form-inscription" style="display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:999px;font-weight:700;text-decoration:none;">Créer un compte</a>
+                    </div>
+                </div>
             <?php endif; ?>
 
             <?php if ($shippingMessage !== ''): ?>
@@ -510,11 +677,12 @@ include 'header.php';
         </section>
     </div>
 
-    <div style="margin-top:16px;">
-        <button type="button" style="width:100%;background:#ffcc00;color:#111;border:none;padding:14px 16px;border-radius:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">
+    <form method="post" action="panier.php" style="margin-top:16px;">
+        <input type="hidden" name="action" value="place_order">
+        <button type="submit" style="width:100%;background:#ffcc00;color:#111;border:none;padding:14px 16px;border-radius:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">
             Valider la commande
         </button>
-    </div>
+    </form>
 </main>
 
 <script>
