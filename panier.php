@@ -285,11 +285,33 @@ $total = 0.0;
 include 'header.php';
 ?>
 
-<main style="max-width:1200px;margin:34px auto;padding:0 16px 60px;">
-    <h1 style="margin:0 0 20px;text-transform:uppercase;font-weight:900;">Finaliser ma commande</h1>
+<style>
+    @media (max-width: 768px) {
+        .cart-page-title {
+            text-align: center;
+        }
 
-    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;">
-        <section style="border:1px solid #eee;padding:20px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,0.03);background:#fff;">
+        .cart-checkout-grid {
+            display: flex !important;
+            flex-direction: column;
+            gap: 14px !important;
+        }
+
+        .cart-summary-block {
+            order: 1;
+        }
+
+        .cart-delivery-block {
+            order: 2;
+        }
+    }
+</style>
+
+<main style="max-width:1200px;margin:34px auto;padding:0 16px 60px;">
+    <h1 class="cart-page-title" style="margin:0 0 20px;text-transform:uppercase;font-weight:900;">Finaliser ma commande</h1>
+
+    <div class="cart-checkout-grid" style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start;">
+        <section class="cart-delivery-block" style="border:1px solid #eee;padding:20px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,0.03);background:#fff;">
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ffcc00;margin-bottom:15px;padding-bottom:5px;">
                 <h2 style="font-size:1.1rem;margin:0;text-transform:uppercase;">Infos client & livraison</h2>
             </div>
@@ -341,7 +363,7 @@ include 'header.php';
             <?php endif; ?>
         </section>
 
-        <section style="background:linear-gradient(160deg,#10131a 0%,#1c2433 100%);color:#fff;border-radius:20px;padding:20px;border:1px solid rgba(255,204,0,0.35);box-shadow:0 10px 24px rgba(0,0,0,0.24);">
+        <section class="cart-summary-block" style="background:linear-gradient(160deg,#10131a 0%,#1c2433 100%);color:#fff;border-radius:20px;padding:20px;border:1px solid rgba(255,204,0,0.35);box-shadow:0 10px 24px rgba(0,0,0,0.24);">
             <h2 style="margin:0 0 14px;text-transform:uppercase;color:#ffcc00;">Récapitulatif panier</h2>
 
             <?php if (isset($_GET['added'])): ?>
@@ -409,6 +431,12 @@ include 'header.php';
                 <p style="margin:8px 0 0;font-size:0.9rem;opacity:0.9;">* Les frais de livraison seront communiqués ultérieurement.</p>
             <?php endif; ?>
         </section>
+    </div>
+
+    <div style="margin-top:16px;">
+        <button type="button" style="width:100%;background:#ffcc00;color:#111;border:none;padding:14px 16px;border-radius:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">
+            Valider la commande
+        </button>
     </div>
 </main>
 
