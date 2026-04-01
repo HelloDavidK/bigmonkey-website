@@ -50,6 +50,24 @@ function getCartTotalQuantity(array $cart): int
     return $count;
 }
 
+function buildProductImagePath(?string $rawImage): string
+{
+    $image = trim((string) $rawImage);
+    if ($image === '') {
+        return 'img/produits/placeholder.jpg';
+    }
+
+    if (preg_match('/^(https?:)?\/\//i', $image) === 1) {
+        return $image;
+    }
+
+    if (strpos($image, 'img/') === 0 || strpos($image, '/img/') === 0) {
+        return ltrim($image, '/');
+    }
+
+    return 'img/produits/' . ltrim($image, '/');
+}
+
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -165,6 +183,18 @@ if ($method === 'POST') {
         exit;
     }
 
+    if ($action === 'remove_booster') {
+        $itemKey = trim((string) ($_POST['item_key'] ?? ''));
+        $boosterId = sanitizePositiveInt($_POST['booster_id'] ?? 0, 0);
+
+        if ($itemKey !== '' && $boosterId > 0 && isset($_SESSION['cart'][$itemKey]['boosters'][$boosterId])) {
+            unset($_SESSION['cart'][$itemKey]['boosters'][$boosterId]);
+        }
+
+        header('Location: panier.php');
+        exit;
+    }
+
     if ($action === 'choose_delivery_address') {
         $selected = trim((string) ($_POST['delivery_address'] ?? ''));
         if ($selected !== '') {
@@ -208,6 +238,15 @@ if ($method === 'POST') {
             $_SESSION['shipping_message'] = 'Adresse utilisée pour cette commande.';
         }
 
+        header('Location: panier.php');
+        exit;
+    }
+
+    if ($action === 'update_contact' && $userId > 0) {
+        $telephone = trim((string) ($_POST['telephone'] ?? ''));
+        $stmt = $pdo->prepare('UPDATE utilisateurs SET telephone = ? WHERE id = ?');
+        $stmt->execute([$telephone, $userId]);
+        $_SESSION['shipping_message'] = 'Coordonnées mises à jour.';
         header('Location: panier.php');
         exit;
     }
@@ -262,7 +301,7 @@ foreach ($cartItems as $item) {
 $productMap = [];
 if (!empty($productIds)) {
     $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-    $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
+    $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo, image_principale FROM produits WHERE id IN ($placeholders)");
     $stmt->execute(array_values(array_unique($productIds)));
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -273,7 +312,7 @@ if (!empty($productIds)) {
 $boosterMap = [];
 if (!empty($boosterIds)) {
     $placeholders = implode(',', array_fill(0, count($boosterIds), '?'));
-    $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
+    $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo, image_principale FROM produits WHERE id IN ($placeholders)");
     $stmt->execute(array_values(array_unique($boosterIds)));
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -304,6 +343,14 @@ include 'header.php';
         .cart-delivery-block {
             order: 2;
         }
+
+        .delivery-checkbox-label {
+            align-items: center !important;
+        }
+
+        .delivery-checkbox-label input[type="checkbox"] {
+            margin-top: 0 !important;
+        }
     }
 </style>
 
@@ -314,11 +361,21 @@ include 'header.php';
         <section class="cart-delivery-block" style="border:1px solid #eee;padding:20px;border-radius:20px;box-shadow:0 4px 12px rgba(0,0,0,0.03);background:#fff;">
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #ffcc00;margin-bottom:15px;padding-bottom:5px;">
                 <h2 style="font-size:1.1rem;margin:0;text-transform:uppercase;">Infos client & livraison</h2>
+                <?php if ($user): ?>
+                    <button type="button" id="toggleContactEdit" style="background:none;border:none;cursor:pointer;font-size:1.1rem;" aria-label="Modifier mes coordonnées">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                <?php endif; ?>
             </div>
 
             <?php if ($user): ?>
                 <p style="margin:8px 0;"><i class="fas fa-user" style="width:20px;color:#ffcc00;"></i> <strong>Pseudo :</strong> <?= e((string) ($user['pseudo'] ?? '')); ?></p>
                 <p style="margin:8px 0;"><i class="fas fa-phone" style="width:20px;color:#ffcc00;"></i> <strong>Tél :</strong> <?= e((string) ($user['telephone'] ?? 'Non renseigné')); ?></p>
+                <form method="post" action="panier.php" id="contactEditForm" style="display:none;margin:8px 0 12px;padding:12px;border:1px solid #eee;border-radius:12px;background:#fffdf0;">
+                    <input type="hidden" name="action" value="update_contact">
+                    <input type="text" name="telephone" value="<?= e((string) ($user['telephone'] ?? '')); ?>" placeholder="Téléphone" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;margin-bottom:8px;">
+                    <button type="submit" style="width:100%;background:#ffcc00;border:none;padding:10px;border-radius:24px;font-weight:700;cursor:pointer;">Enregistrer mes coordonnées</button>
+                </form>
             <?php else: ?>
                 <p style="margin:8px 0;color:#b91c1c;"><strong>Connectez-vous</strong> pour lier l'adresse à votre profil.</p>
             <?php endif; ?>
@@ -355,7 +412,7 @@ include 'header.php';
                         <input type="text" name="quartier" placeholder="Quartier" style="flex:1;padding:12px;border-radius:10px;border:1px solid #ddd;">
                         <input type="text" name="ville" placeholder="Ville" style="flex:1;padding:12px;border-radius:10px;border:1px solid #ddd;">
                     </div>
-                    <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:0.95rem;">
+                    <label class="delivery-checkbox-label" style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:0.95rem;">
                         <input type="checkbox" name="save_for_future" value="1">
                         Utiliser cette adresse pour mes prochaines commandes.
                     </label>
@@ -391,9 +448,13 @@ include 'header.php';
                         : (float) $product['prix_regulier'];
                     $lineTotal = $price * $qty;
                     $total += $lineTotal;
+                    $productImage = buildProductImagePath(isset($product['image_principale']) ? (string) $product['image_principale'] : null);
                     ?>
                     <article style="border:1px solid rgba(255,255,255,0.13);border-radius:12px;padding:14px 14px;margin-bottom:12px;background:rgba(255,255,255,0.03);">
-                        <h3 style="margin:0 0 6px;font-size:1.05rem;font-weight:900;"><?= e($product['nom']); ?></h3>
+                        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;">
+                            <img src="<?= e($productImage); ?>" alt="<?= e($product['nom']); ?>" style="width:46px;height:46px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.18);">
+                            <h3 style="margin:0;font-size:1.05rem;font-weight:900;"><?= e($product['nom']); ?></h3>
+                        </div>
                         <p style="margin:0 0 4px;">Quantité : <?= $qty; ?></p>
                         <p style="margin:0 0 8px;">Sous-total : <strong><?= number_format($lineTotal, 0, '.', ' '); ?> Ar</strong></p>
                         <?php if (!empty($item['boosters']) && is_array($item['boosters'])): ?>
@@ -412,7 +473,15 @@ include 'header.php';
                                     $boosterLine = $boosterPrice * $boosterQtyInt;
                                     $total += $boosterLine;
                                     ?>
-                                    <li>Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</li>
+                                    <li style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                        <span>Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
+                                        <form method="post" action="panier.php" style="margin:0;">
+                                            <input type="hidden" name="action" value="remove_booster">
+                                            <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
+                                            <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
+                                            <button type="submit" aria-label="Retirer ce booster" style="border:none;background:transparent;color:#fff;font-weight:900;cursor:pointer;">✕</button>
+                                        </form>
+                                    </li>
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
@@ -440,5 +509,20 @@ include 'header.php';
         </button>
     </div>
 </main>
+
+<script>
+    (function () {
+        const toggleBtn = document.getElementById('toggleContactEdit');
+        const form = document.getElementById('contactEditForm');
+        if (!toggleBtn || !form) {
+            return;
+        }
+
+        toggleBtn.addEventListener('click', function () {
+            const isHidden = form.style.display === 'none';
+            form.style.display = isHidden ? 'block' : 'none';
+        });
+    })();
+</script>
 
 <?php include 'footer.php'; ?>
