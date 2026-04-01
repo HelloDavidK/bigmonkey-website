@@ -16,6 +16,26 @@ function e($value): string
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
+function buildSafeRedirectTarget(?string $target): string
+{
+    $fallback = 'panier.php';
+    $value = trim((string) $target);
+
+    if ($value === '') {
+        return $fallback;
+    }
+
+    if (preg_match('/^https?:\/\//i', $value) === 1) {
+        return $fallback;
+    }
+
+    if (strpos($value, '/') === 0 || strpos($value, '..') !== false) {
+        return $fallback;
+    }
+
+    return $value;
+}
+
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -28,6 +48,7 @@ if ($method === 'POST') {
     if ($action === 'add_bundle') {
         $mainProductId = sanitizePositiveInt($_POST['main_product_id'] ?? 0, 0);
         $qtyMain = max(1, sanitizePositiveInt($_POST['qty_main'] ?? 1, 1));
+        $redirectTo = buildSafeRedirectTarget($_POST['redirect_to'] ?? ($_SERVER['HTTP_REFERER'] ?? ''));
 
         if ($mainProductId > 0) {
             $bundleKey = 'main_' . $mainProductId;
@@ -60,7 +81,8 @@ if ($method === 'POST') {
             }
         }
 
-        header('Location: panier.php?added=1');
+        $separator = strpos($redirectTo, '?') === false ? '?' : '&';
+        header('Location: ' . $redirectTo . $separator . 'added=1');
         exit;
     }
 
@@ -194,3 +216,4 @@ include 'header.php';
 </main>
 
 <?php include 'footer.php'; ?>
+produit.php
