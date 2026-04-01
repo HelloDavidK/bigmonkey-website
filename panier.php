@@ -318,6 +318,7 @@ include 'header.php';
 
             <?php if ($user): ?>
                 <p style="margin:8px 0;"><i class="fas fa-user" style="width:20px;color:#ffcc00;"></i> <strong>Pseudo :</strong> <?= e((string) ($user['pseudo'] ?? '')); ?></p>
+                <p style="margin:8px 0;"><i class="fas fa-phone" style="width:20px;color:#ffcc00;"></i> <strong>Tél :</strong> <?= e((string) ($user['telephone'] ?? 'Non renseigné')); ?></p>
             <?php else: ?>
                 <p style="margin:8px 0;color:#b91c1c;"><strong>Connectez-vous</strong> pour lier l'adresse à votre profil.</p>
             <?php endif; ?>
