@@ -314,9 +314,10 @@ if ($method === 'POST') {
 
         $orderProductMap = [];
         if (!empty($productIdsForOrder)) {
-            $placeholders = implode(',', array_fill(0, count($productIdsForOrder), '?'));
+            $uniqueProductIds = array_values(array_unique($productIdsForOrder));
+            $placeholders = implode(',', array_fill(0, count($uniqueProductIds), '?'));
             $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
-            $stmt->execute(array_values(array_unique($productIdsForOrder)));
+            $stmt->execute($uniqueProductIds);
 
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $orderProductMap[(int) $row['id']] = $row;
@@ -325,9 +326,10 @@ if ($method === 'POST') {
 
         $orderBoosterMap = [];
         if (!empty($boosterIdsForOrder)) {
-            $placeholders = implode(',', array_fill(0, count($boosterIdsForOrder), '?'));
+            $uniqueBoosterIds = array_values(array_unique($boosterIdsForOrder));
+            $placeholders = implode(',', array_fill(0, count($uniqueBoosterIds), '?'));
             $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo FROM produits WHERE id IN ($placeholders)");
-            $stmt->execute(array_values(array_unique($boosterIdsForOrder)));
+            $stmt->execute($uniqueBoosterIds);
 
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $orderBoosterMap[(int) $row['id']] = $row;
@@ -349,6 +351,7 @@ if ($method === 'POST') {
             $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
                 ? (float) $product['prix_promo']
                 : (float) $product['prix_regulier'];
+
             $lineTotal = $price * $qty;
             $orderTotal += $lineTotal;
 
@@ -366,6 +369,7 @@ if ($method === 'POST') {
                     $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
                         ? (float) $booster['prix_promo']
                         : (float) $booster['prix_regulier'];
+
                     $boosterLine = $boosterPrice * $boosterQtyInt;
                     $orderTotal += $boosterLine;
 
@@ -391,25 +395,57 @@ if ($method === 'POST') {
             exit;
         }
 
-        $order = [
-            'order_number' => 'CMD-' . date('Ymd-His') . '-' . random_int(100, 999),
-            'status' => 'En attente',
-            'created_at' => date('d/m/Y H:i'),
-            'address' => $currentAddress,
-            'lines' => $orderLines,
-            'total' => $orderTotal,
-        ];
+        $orderNumber = 'CMD-' . date('Ymd-His') . '-' . random_int(100, 999);
+        $orderStatus = 'En attente';
 
-        if (!isset($_SESSION['orders'][$userId]) || !is_array($_SESSION['orders'][$userId])) {
-            $_SESSION['orders'][$userId] = [];
+        $addressJson = json_encode($currentAddress, JSON_UNESCAPED_UNICODE);
+        $linesJson = json_encode($orderLines, JSON_UNESCAPED_UNICODE);
+
+        if ($addressJson === false || $linesJson === false) {
+            $_SESSION['shipping_message'] = 'Erreur lors de la préparation de la commande.';
+            header('Location: panier.php');
+            exit;
         }
-        $_SESSION['orders'][$userId][] = $order;
 
-        unset($_SESSION['cart'], $_SESSION['temp_delivery_address'], $_SESSION['selected_delivery_address']);
-        $_SESSION['cart'] = [];
+        try {
+            $pdo->beginTransaction();
 
-        header('Location: commandes.php?ordered=1');
-        exit;
+            $insertStmt = $pdo->prepare("
+                INSERT INTO commandes (
+                    utilisateur_id,
+                    numero_commande,
+                    statut,
+                    adresse_livraison,
+                    lignes_json,
+                    total
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            ");
+
+            $insertStmt->execute([
+                $userId,
+                $orderNumber,
+                $orderStatus,
+                $addressJson,
+                $linesJson,
+                $orderTotal
+            ]);
+
+            $pdo->commit();
+
+            unset($_SESSION['cart'], $_SESSION['temp_delivery_address'], $_SESSION['selected_delivery_address']);
+            $_SESSION['cart'] = [];
+
+            header('Location: commandes.php?ordered=1');
+            exit;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            $_SESSION['shipping_message'] = 'Une erreur est survenue lors de l’enregistrement de votre commande.';
+            header('Location: panier.php');
+            exit;
+        }
     }
 }
 
@@ -461,9 +497,10 @@ foreach ($cartItems as $item) {
 
 $productMap = [];
 if (!empty($productIds)) {
-    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+    $uniqueProductIds = array_values(array_unique($productIds));
+    $placeholders = implode(',', array_fill(0, count($uniqueProductIds), '?'));
     $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo, image_principale FROM produits WHERE id IN ($placeholders)");
-    $stmt->execute(array_values(array_unique($productIds)));
+    $stmt->execute($uniqueProductIds);
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $productMap[(int) $row['id']] = $row;
@@ -472,9 +509,10 @@ if (!empty($productIds)) {
 
 $boosterMap = [];
 if (!empty($boosterIds)) {
-    $placeholders = implode(',', array_fill(0, count($boosterIds), '?'));
+    $uniqueBoosterIds = array_values(array_unique($boosterIds));
+    $placeholders = implode(',', array_fill(0, count($uniqueBoosterIds), '?'));
     $stmt = $pdo->prepare("SELECT id, nom, prix_regulier, prix_promo, image_principale FROM produits WHERE id IN ($placeholders)");
-    $stmt->execute(array_values(array_unique($boosterIds)));
+    $stmt->execute($uniqueBoosterIds);
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $boosterMap[(int) $row['id']] = $row;
@@ -628,34 +666,35 @@ include 'header.php';
                         </div>
                         <p style="margin:0 0 4px;">Quantité : <?= $qty; ?></p>
                         <p style="margin:0 0 8px;">Sous-total : <strong><?= number_format($lineTotal, 0, '.', ' '); ?> Ar</strong></p>
+
                         <?php if (!empty($item['boosters']) && is_array($item['boosters'])): ?>
                             <div style="margin:10px 0 10px;">
                                 <div style="font-weight:800;margin-bottom:6px;">Boosters</div>
                                 <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;">
-                                <?php foreach ($item['boosters'] as $boosterId => $boosterQty): ?>
-                                    <?php
-                                    $boosterIdInt = (int) $boosterId;
-                                    $boosterQtyInt = (int) $boosterQty;
-                                    if ($boosterQtyInt <= 0 || !isset($boosterMap[$boosterIdInt])) {
-                                        continue;
-                                    }
-                                    $booster = $boosterMap[$boosterIdInt];
-                                    $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
-                                        ? (float) $booster['prix_promo']
-                                        : (float) $booster['prix_regulier'];
-                                    $boosterLine = $boosterPrice * $boosterQtyInt;
-                                    $total += $boosterLine;
-                                    ?>
-                                    <li style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-                                        <span style="display:block;min-width:0;flex:1;font-size:0.95rem;font-weight:700;line-height:1.3;word-break:break-word;"><?= e($booster['nom']); ?> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
-                                        <form method="post" action="panier.php" style="margin:0;">
-                                            <input type="hidden" name="action" value="remove_booster">
-                                            <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
-                                            <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
-                                            <button type="submit" aria-label="Retirer ce booster" style="width:20px;height:20px;border:none;border-radius:50%;background:#fff;color:#111;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;">✕</button>
-                                        </form>
-                                    </li>
-                                <?php endforeach; ?>
+                                    <?php foreach ($item['boosters'] as $boosterId => $boosterQty): ?>
+                                        <?php
+                                        $boosterIdInt = (int) $boosterId;
+                                        $boosterQtyInt = (int) $boosterQty;
+                                        if ($boosterQtyInt <= 0 || !isset($boosterMap[$boosterIdInt])) {
+                                            continue;
+                                        }
+                                        $booster = $boosterMap[$boosterIdInt];
+                                        $boosterPrice = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
+                                            ? (float) $booster['prix_promo']
+                                            : (float) $booster['prix_regulier'];
+                                        $boosterLine = $boosterPrice * $boosterQtyInt;
+                                        $total += $boosterLine;
+                                        ?>
+                                        <li style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                                            <span style="display:block;min-width:0;flex:1;font-size:0.95rem;font-weight:700;line-height:1.3;word-break:break-word;"><?= e($booster['nom']); ?> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
+                                            <form method="post" action="panier.php" style="margin:0;">
+                                                <input type="hidden" name="action" value="remove_booster">
+                                                <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
+                                                <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
+                                                <button type="submit" aria-label="Retirer ce booster" style="width:20px;height:20px;border:none;border-radius:50%;background:#fff;color:#111;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+                                            </form>
+                                        </li>
+                                    <?php endforeach; ?>
                                 </ul>
                             </div>
                         <?php endif; ?>
