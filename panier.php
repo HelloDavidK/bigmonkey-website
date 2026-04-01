@@ -474,12 +474,12 @@ include 'header.php';
                                     $total += $boosterLine;
                                     ?>
                                     <li style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                                        <span>Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
+                                        <span style="display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Booster <strong><?= e($booster['nom']); ?></strong> x <?= $boosterQtyInt; ?> (<?= number_format($boosterLine, 0, '.', ' '); ?> Ar)</span>
                                         <form method="post" action="panier.php" style="margin:0;">
                                             <input type="hidden" name="action" value="remove_booster">
                                             <input type="hidden" name="item_key" value="<?= e((string) $itemKey); ?>">
                                             <input type="hidden" name="booster_id" value="<?= $boosterIdInt; ?>">
-                                            <button type="submit" aria-label="Retirer ce booster" style="border:none;background:transparent;color:#fff;font-weight:900;cursor:pointer;">✕</button>
+                                            <button type="submit" aria-label="Retirer ce booster" style="width:26px;height:26px;border:none;border-radius:50%;background:#fff;color:#111;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;">✕</button>
                                         </form>
                                     </li>
                                 <?php endforeach; ?>
