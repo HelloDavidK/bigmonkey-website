@@ -58,11 +58,16 @@ function getStatusBadgeStyle(string $status): string
 {
     switch ($status) {
         case 'Livrée':
-            return 'background:#dcfce7;color:#166534;border:1px solid #86efac;';
+            return 'background:#dcfce7;color:#166534;border:1px solid #22c55e;'; // vert
+
         case 'Expédiée':
-            return 'background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;';
+            return 'background:#fff7ed;color:#c2410c;border:1px solid #f97316;'; // orange
+
+        case 'En attente':
+            return 'background:#fee2e2;color:#991b1b;border:1px solid #ef4444;'; // rouge
+
         default:
-            return 'background:#fff7ed;color:#c2410c;border:1px solid #fdba74;';
+            return 'background:#f1f5f9;color:#334155;border:1px solid #cbd5f5;'; // gris fallback
     }
 }
 
