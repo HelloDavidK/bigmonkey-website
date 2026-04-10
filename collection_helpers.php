@@ -244,7 +244,7 @@ function fetchAttributeOptions(PDO $pdo, string $attributeName, array $categoryI
         $grouped[$value] += $total;
     }
 
-    $options = [];
+        $options = [];
     foreach ($grouped as $value => $total) {
         $options[] = [
             'value' => $value,
@@ -262,21 +262,26 @@ function fetchAttributeOptions(PDO $pdo, string $attributeName, array $categoryI
                 'Boisson' => 5,
             ];
 
-            $rankA = $order[$a['value']] ?? 999;
-            $rankB = $order[$b['value']] ?? 999;
+            $rankA = $order[(string) $a['value']] ?? 999;
+            $rankB = $order[(string) $b['value']] ?? 999;
 
             if ($rankA !== $rankB) {
                 return $rankA <=> $rankB;
             }
         }
 
-        return strcasecmp($a['value'], $b['value']);
+        $numericAttributes = ['contenance_ml', 'nicotine_mg', 'puissance_w', 'nb_puffs'];
+
+        if (in_array($attributeName, $numericAttributes, true)) {
+            return (float) $a['value'] <=> (float) $b['value'];
+        }
+
+        return strcasecmp((string) $a['value'], (string) $b['value']);
     });
 
     return $options;
 }
-
-function formatCollectionTitle(string $category): string
+    function formatCollectionTitle(string $category): string
 {
     $map = [
         'eliquides' => 'E-LIQUIDES',
@@ -340,7 +345,7 @@ function getAttributeFiltersByCategory(): array
             'contenance_ml',
             'ratio_pg_vg',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
         ],
         'diy' => [
             'type_produit',
@@ -348,7 +353,7 @@ function getAttributeFiltersByCategory(): array
             'contenance_ml',
             'ratio_pg_vg',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
         ],
         'kits' => [
             'type_batterie',
@@ -370,7 +375,7 @@ function getAttributeFiltersByCategory(): array
             'saveur_famille',
             'nb_puffs',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
         ],
         'clearos' => [
             'tirage',
@@ -394,7 +399,7 @@ function getAttributeFiltersByCategory(): array
             'contenance_ml',
             'ratio_pg_vg',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
         ],
         'bons-plans' => [
             'type_produit',
@@ -402,7 +407,7 @@ function getAttributeFiltersByCategory(): array
             'contenance_ml',
             'ratio_pg_vg',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
         ],
         'tous' => [
             'type_produit',
@@ -410,7 +415,7 @@ function getAttributeFiltersByCategory(): array
             'contenance_ml',
             'ratio_pg_vg',
             'nicotine_mg',
-            'sel_nicotine',
+            'sel_nicotine_mg',
             'type_batterie',
             'puissance_w',
             'tirage',
@@ -432,7 +437,7 @@ function getAttributeFilterLabels(): array
         'contenance_ml' => 'CONTENANCE (ML)',
         'ratio_pg_vg' => 'RATIO PG/VG',
         'nicotine_mg' => 'NICOTINE (MG)',
-        'sel_nicotine' => 'SEL DE NICOTINE',
+        'sel_nicotine_mg' => 'SEL DE NICOTINE (MG)',
         'type_batterie' => 'TYPE BATTERIE',
         'puissance_w' => 'PUISSANCE (W)',
         'tirage' => 'TIRAGE',
@@ -734,6 +739,151 @@ function renderCollectionResultsHtml(array $context, array $productsData, array 
         </nav>
     <?php endif; ?>
     <?php
+
+    return (string) ob_get_clean();
+}
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function fetchHomeSectionProducts(PDO $pdo, string $sectionKey, int $limit = 4, string $categorySlug = ''): array
+{
+    $sectionColumns = [
+        'promotions' => 'accueil_promotions',
+        'pepite' => 'accueil_pepite',
+        'puff_selection' => 'accueil_puff_selection',
+    ];
+
+    if (!isset($sectionColumns[$sectionKey])) {
+        return [];
+    }
+
+    $column = $sectionColumns[$sectionKey];
+    $limit = max(1, $limit);
+
+    $sql = '
+        SELECT p.*, c.slug AS categorie_slug, c.nom AS categorie_nom
+        FROM produits p
+        LEFT JOIN categories c ON c.id = p.categorie_id
+        WHERE p.is_active = 1
+          AND p.stock > 0
+          AND p.' . $column . ' = 1
+    ';
+
+    $params = [];
+
+    if ($sectionKey === 'promotions') {
+        $sql .= ' AND p.prix_promo IS NOT NULL AND p.prix_promo > 0';
+    }
+
+    if ($categorySlug !== '') {
+        $categoryIds = fetchCategoryTreeIds($pdo, $categorySlug);
+
+        if (empty($categoryIds)) {
+            return [];
+        }
+
+        $placeholders = buildInPlaceholders('home_cat', $categoryIds, $params);
+        $sql .= ' AND p.categorie_id IN (' . implode(', ', $placeholders) . ')';
+    }
+
+    if ($sectionKey === 'promotions') {
+        $sql .= ' ORDER BY (p.prix_regulier - COALESCE(p.prix_promo, p.prix_regulier)) DESC, p.id DESC';
+    } else {
+        $sql .= ' ORDER BY p.id DESC';
+    }
+
+    $sql .= ' LIMIT :limit';
+
+    $stmt = $pdo->prepare($sql);
+    bindNamedParams($stmt, $params);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function renderHomePromoCards(array $products): string
+{
+    ob_start();
+
+    foreach ($products as $p) {
+        $slug = trim((string) ($p['slug'] ?? ''));
+        $url = $slug !== '' ? 'produit.php?slug=' . urlencode($slug) : 'collection.php';
+        $image = buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null);
+
+        $prixRegulier = (float) ($p['prix_regulier'] ?? 0);
+        $prixPromo = isset($p['prix_promo']) && $p['prix_promo'] !== null ? (float) $p['prix_promo'] : null;
+        $prixFinal = $prixPromo ?: $prixRegulier;
+
+        $badge = '';
+        if ($prixPromo && $prixRegulier > 0 && $prixPromo < $prixRegulier) {
+            $discount = (($prixRegulier - $prixPromo) / $prixRegulier) * 100;
+            $roundedDiscount = (int) ceil($discount / 10) * 10;
+            $badge = '-' . $roundedDiscount . '%';
+        }
+        ?>
+        <div class="promo-card">
+            <div class="promo-badge" style="<?= $badge === '' ? 'display:none;' : ''; ?>"><?= e($badge); ?></div>
+
+            <a href="<?= e($url); ?>" class="promo-image">
+                <img src="<?= e($image); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
+            </a>
+
+            <div class="promo-info">
+                <h4><?= e($p['nom'] ?? 'Produit'); ?></h4>
+                <p class="price">
+                    <?php if ($prixPromo): ?>
+                        <span class="old-price"><?= e(number_format($prixRegulier, 0, '.', ' ')); ?> Ar</span>
+                        <span class="promo-val"><?= e(number_format($prixFinal, 0, '.', ' ')); ?> Ar</span>
+                    <?php else: ?>
+                        <span class="promo-val"><?= e(number_format($prixFinal, 0, '.', ' ')); ?> Ar</span>
+                    <?php endif; ?>
+                </p>
+                <a href="<?= e($url); ?>" class="btn-promo">Voir l'offre</a>
+            </div>
+        </div>
+        <?php
+    }
+
+    return (string) ob_get_clean();
+}
+
+function renderHomePepiteCards(array $products, string $frontCategory): string
+{
+    ob_start();
+
+    foreach ($products as $p) {
+        $slug = trim((string) ($p['slug'] ?? ''));
+        $url = $slug !== '' ? 'produit.php?slug=' . urlencode($slug) : 'collection.php';
+        $image = buildProductImagePath(isset($p['image_principale']) ? (string) $p['image_principale'] : null);
+
+        $prixRegulier = (float) ($p['prix_regulier'] ?? 0);
+        $prixPromo = isset($p['prix_promo']) && $p['prix_promo'] !== null ? (float) $p['prix_promo'] : null;
+        $prixFinal = $prixPromo ?: $prixRegulier;
+        ?>
+        <div class="product-card" data-category="<?= e($frontCategory); ?>">
+            <a href="<?= e($url); ?>">
+                <img src="<?= e($image); ?>" alt="<?= e($p['nom'] ?? 'Produit'); ?>">
+            </a>
+
+            <div class="product-info">
+                <h3><?= e($p['nom'] ?? 'Produit'); ?></h3>
+                <span class="product-desc">
+                    <?= !empty($p['description_courte']) ? e((string) $p['description_courte']) : 'Découvrez ce produit sélectionné par Big Monkey.'; ?>
+                </span>
+                <p class="price"><?= e(number_format($prixFinal, 0, '.', ' ')); ?> Ar</p>
+
+                <form method="post" action="panier.php" class="home-add-to-cart-form">
+                    <input type="hidden" name="action" value="add_bundle">
+                    <input type="hidden" name="main_product_id" value="<?= (int) ($p['id'] ?? 0); ?>">
+                    <input type="hidden" name="qty_main" value="1">
+                    <input type="hidden" name="redirect_to" value="index.php">
+                    <button type="submit" class="add-to-cart">AJOUTER AU PANIER</button>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
 
     return (string) ob_get_clean();
 }
