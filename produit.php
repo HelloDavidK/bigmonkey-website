@@ -1947,6 +1947,11 @@ if ($slug !== '') {
             $techItems[] = ['label' => 'Tx nicotine', 'value' => $nicotine];
         }
 
+        $selnicotine = getFirstAttributeValue($attributes, 'sel_nicotine_mg');
+if ($selnicotine !== '') {
+    $techItems[] = ['label' => 'Sel de nicotine', 'value' => $selnicotine];
+}
+
         $contenance = getFirstAttributeValue($attributes, 'contenance_ml');
         if ($contenance !== '') {
             $techItems[] = ['label' => 'Contenance', 'value' => formatContenanceDisplay($contenance)];
