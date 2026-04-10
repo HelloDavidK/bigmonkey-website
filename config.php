@@ -20,10 +20,8 @@ $user = getenv('DB_USER') ?: 'root';
 $password = getenv('DB_PASSWORD') ?: '';
 
 try {
-    // Utilisation de utf8mb4 pour une compatibilité totale
     $dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
 
-    // Options PDO pour la sécurité et la praticité
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
