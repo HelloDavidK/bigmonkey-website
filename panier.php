@@ -68,6 +68,141 @@ function buildProductImagePath(?string $rawImage): string
     return 'img/produits/' . ltrim($image, '/');
 }
 
+function normalizeVariantKey(string $value): string
+{
+    $value = trim(mb_strtolower($value, 'UTF-8'));
+    $replace = [
+        'à' => 'a', 'â' => 'a', 'ä' => 'a',
+        'ç' => 'c',
+        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'î' => 'i', 'ï' => 'i',
+        'ô' => 'o', 'ö' => 'o',
+        'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ÿ' => 'y',
+    ];
+    $value = strtr($value, $replace);
+    $value = preg_replace('/[^a-z0-9]+/i', '', $value) ?? '';
+    return trim((string) $value);
+}
+
+function parsePriceValue(string $raw): ?float
+{
+    $value = trim($raw);
+    if ($value === '') {
+        return null;
+    }
+
+    $value = str_replace(['Ar', 'ariary', ' '], '', $value);
+    $value = str_replace(',', '.', $value);
+    if (!is_numeric($value)) {
+        return null;
+    }
+
+    $parsed = (float) $value;
+    return $parsed >= 0 ? $parsed : null;
+}
+
+/**
+ * @param array<int, array{attribut_nom: mixed, attribut_valeur: mixed}> $rows
+ * @return array<int, array{label: string, prix_regulier: float, prix_promo: float|null, prix_final: float}>
+ */
+function buildNicotineVariantsFromRows(array $rows, float $baseRegular, ?float $basePromo): array
+{
+    $attributes = [];
+    foreach ($rows as $row) {
+        $name = trim((string) ($row['attribut_nom'] ?? ''));
+        $value = trim((string) ($row['attribut_valeur'] ?? ''));
+        if ($name === '' || $value === '') {
+            continue;
+        }
+
+        if (!isset($attributes[$name])) {
+            $attributes[$name] = [];
+        }
+        $attributes[$name][] = $value;
+    }
+
+    $labels = [];
+    foreach ($attributes['nicotine_mg'] ?? [] as $rawValue) {
+        $parts = preg_split('/\s*(?:,|;|\||\/)\s*/', (string) $rawValue) ?: [];
+        foreach ($parts as $part) {
+            $label = trim((string) $part);
+            if ($label === '') {
+                continue;
+            }
+            if (preg_match('/mg/i', $label) !== 1 && preg_match('/^\d+(\.\d+)?$/', $label) === 1) {
+                $label .= 'mg';
+            }
+            $labels[] = $label;
+        }
+    }
+    $labels = array_values(array_unique($labels));
+    if (count($labels) <= 1) {
+        return [];
+    }
+
+    $regularOverrides = [];
+    $promoOverrides = [];
+
+    foreach ($attributes as $attrName => $attrValues) {
+        $attrKey = normalizeVariantKey($attrName);
+        foreach ($attrValues as $attrValue) {
+            if ($attrKey === 'nicotineprix' || $attrKey === 'prixnicotine' || $attrKey === 'nicotineprixpromo' || $attrKey === 'prixpromonicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', (string) $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $price = parsePriceValue((string) $segments[1]);
+                    if ($key === '' || $price === null) {
+                        continue;
+                    }
+                    if ($attrKey === 'nicotineprixpromo' || $attrKey === 'prixpromonicotine') {
+                        $promoOverrides[$key] = $price;
+                    } else {
+                        $regularOverrides[$key] = $price;
+                    }
+                }
+            }
+        }
+
+        if (strpos($attrKey, 'nicotineprix') === 0 || strpos($attrKey, 'prixnicotine') === 0) {
+            if (preg_match('/(?:nicotineprix|prixnicotine)(?:promo)?(.+)/', $attrKey, $matches) !== 1) {
+                continue;
+            }
+
+            $suffix = trim((string) ($matches[1] ?? ''));
+            $price = parsePriceValue((string) ($attrValues[0] ?? ''));
+            if ($suffix === '' || $price === null) {
+                continue;
+            }
+
+            if (strpos($attrKey, 'promo') !== false) {
+                $promoOverrides[$suffix] = $price;
+            } else {
+                $regularOverrides[$suffix] = $price;
+            }
+        }
+    }
+
+    $variants = [];
+    foreach ($labels as $label) {
+        $key = normalizeVariantKey($label);
+        $regular = $regularOverrides[$key] ?? $baseRegular;
+        $promo = $promoOverrides[$key] ?? $basePromo;
+        $variants[] = [
+            'label' => $label,
+            'prix_regulier' => $regular,
+            'prix_promo' => $promo,
+            'prix_final' => $promo !== null ? $promo : $regular,
+        ];
+    }
+
+    return $variants;
+}
+
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -126,14 +261,55 @@ if ($method === 'POST') {
         $mainProductId = sanitizePositiveInt($_POST['main_product_id'] ?? 0, 0);
         $qtyMain = max(1, sanitizePositiveInt($_POST['qty_main'] ?? 1, 1));
         $redirectTo = buildSafeRedirectTarget($_POST['redirect_to'] ?? ($_SERVER['HTTP_REFERER'] ?? ''));
+        $requestedNicotineVariant = trim((string) ($_POST['nicotine_variant'] ?? ''));
+        $selectedVariant = null;
 
         if ($mainProductId > 0) {
+            $productStmt = $pdo->prepare('SELECT id, prix_regulier, prix_promo FROM produits WHERE id = :id LIMIT 1');
+            $productStmt->execute(['id' => $mainProductId]);
+            $productRow = $productStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            if ($productRow) {
+                $baseRegular = (float) ($productRow['prix_regulier'] ?? 0);
+                $basePromo = isset($productRow['prix_promo']) && $productRow['prix_promo'] !== null
+                    ? (float) $productRow['prix_promo']
+                    : null;
+
+                $attrStmt = $pdo->prepare('SELECT attribut_nom, attribut_valeur FROM produit_attributs WHERE produit_id = :id');
+                $attrStmt->execute(['id' => $mainProductId]);
+                $variantRows = $attrStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $variants = buildNicotineVariantsFromRows($variantRows, $baseRegular, $basePromo);
+                if (!empty($variants) && $requestedNicotineVariant !== '') {
+                    $requestedKey = normalizeVariantKey($requestedNicotineVariant);
+                    foreach ($variants as $variant) {
+                        if (normalizeVariantKey((string) $variant['label']) === $requestedKey) {
+                            $selectedVariant = $variant;
+                            break;
+                        }
+                    }
+                }
+            }
+
             $bundleKey = 'main_' . $mainProductId;
+            if ($selectedVariant) {
+                $bundleKey .= '_' . normalizeVariantKey((string) $selectedVariant['label']);
+            }
+
             if (!isset($_SESSION['cart'][$bundleKey])) {
                 $_SESSION['cart'][$bundleKey] = [
                     'product_id' => $mainProductId,
                     'qty' => 0,
                     'boosters' => [],
+                ];
+            }
+
+            if ($selectedVariant) {
+                $_SESSION['cart'][$bundleKey]['variant'] = [
+                    'type' => 'nicotine_mg',
+                    'label' => (string) $selectedVariant['label'],
+                    'prix_regulier' => (float) $selectedVariant['prix_regulier'],
+                    'prix_promo' => $selectedVariant['prix_promo'] !== null ? (float) $selectedVariant['prix_promo'] : null,
                 ];
             }
 
@@ -351,6 +527,15 @@ if ($method === 'POST') {
             $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
                 ? (float) $product['prix_promo']
                 : (float) $product['prix_regulier'];
+            $variantLabel = '';
+            if (isset($cartItem['variant']) && is_array($cartItem['variant'])) {
+                $variantLabel = trim((string) ($cartItem['variant']['label'] ?? ''));
+                if (isset($cartItem['variant']['prix_promo']) && $cartItem['variant']['prix_promo'] !== null) {
+                    $price = (float) $cartItem['variant']['prix_promo'];
+                } elseif (isset($cartItem['variant']['prix_regulier'])) {
+                    $price = (float) $cartItem['variant']['prix_regulier'];
+                }
+            }
 
             $lineTotal = $price * $qty;
             $orderTotal += $lineTotal;
@@ -381,13 +566,13 @@ if ($method === 'POST') {
                 }
             }
 
-            $orderLines[] = [
-                'name' => (string) ($product['nom'] ?? 'Produit'),
-                'qty' => $qty,
-                'line_total' => $lineTotal,
-                'boosters' => $lineBoosters,
-            ];
-        }
+            $orderLines[] = [␊
+                'name' => (string) ($product['nom'] ?? 'Produit') . ($variantLabel !== '' ? ' (' . $variantLabel . ')' : ''),
+                'qty' => $qty,␊
+                'line_total' => $lineTotal,␊
+                'boosters' => $lineBoosters,␊
+            ];␊
+        }␊
 
         if (empty($orderLines)) {
             $_SESSION['shipping_message'] = 'Impossible de valider la commande avec les produits actuels.';
@@ -655,6 +840,15 @@ include 'header.php';
                     $price = isset($product['prix_promo']) && $product['prix_promo'] !== null
                         ? (float) $product['prix_promo']
                         : (float) $product['prix_regulier'];
+                    $variantLabel = '';
+                    if (isset($item['variant']) && is_array($item['variant'])) {
+                        $variantLabel = trim((string) ($item['variant']['label'] ?? ''));
+                        if (isset($item['variant']['prix_promo']) && $item['variant']['prix_promo'] !== null) {
+                            $price = (float) $item['variant']['prix_promo'];
+                        } elseif (isset($item['variant']['prix_regulier'])) {
+                            $price = (float) $item['variant']['prix_regulier'];
+                        }
+                    }
                     $lineTotal = $price * $qty;
                     $total += $lineTotal;
                     $productImage = buildProductImagePath(isset($product['image_principale']) ? (string) $product['image_principale'] : null);
@@ -664,6 +858,9 @@ include 'header.php';
                             <img src="<?= e($productImage); ?>" alt="<?= e($product['nom']); ?>" style="width:46px;height:46px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.18);">
                             <h3 style="margin:0;font-size:1.05rem;font-weight:900;"><?= e($product['nom']); ?></h3>
                         </div>
+                        <?php if ($variantLabel !== ''): ?>
+                            <p style="margin:0 0 4px;">Variante : <?= e($variantLabel); ?></p>
+                        <?php endif; ?>
                         <p style="margin:0 0 4px;">Quantité : <?= $qty; ?></p>
                         <p style="margin:0 0 8px;">Sous-total : <strong><?= number_format($lineTotal, 0, '.', ' '); ?> Ar</strong></p>
 
