@@ -470,6 +470,21 @@ function buildVariantCards(array $variants, string $type, string $typeLabel, str
 
     return $cards;
 }
+function productHasVariantStock(array $nicotineVariants, array $saltNicotineVariants): bool
+{
+    return !empty($nicotineVariants) || !empty($saltNicotineVariants);
+}
+
+function getTotalVariantStock(array $variantCards): int
+{
+    $total = 0;
+
+    foreach ($variantCards as $card) {
+        $total += (int) ($card['stock'] ?? 0);
+    }
+
+    return $total;
+}
 function extractMlValue(string $value): int
 {
     if (preg_match('/(\d+)/', $value, $matches) === 1) {
@@ -1090,34 +1105,9 @@ if ($slug !== '') {
 
 .purchase-card.is-out-of-stock .qty-btn,
 .purchase-card.is-out-of-stock .qty-input {
-    color: #c4c7ce !important;
-    background: transparent;
-    cursor: not-allowed;
-}
-
-.purchase-card.is-out-of-stock .qty-btn:disabled,
-.purchase-card.is-out-of-stock .qty-input:disabled {
-    opacity: 1;
-}
-
-.purchase-card.is-out-of-stock .purchase-product-title,
-.purchase-card.is-out-of-stock .purchase-product-brand,
-.purchase-card.is-out-of-stock .purchase-final-price,
-.purchase-card.is-out-of-stock .purchase-old-price,
-.purchase-card.is-out-of-stock .purchase-product-note {
-    color: #6b7280 !important;
-}
-
-.purchase-card.is-out-of-stock .purchase-qty-controls {
-    border-color: #cbd5e1;
-    background: #e5e7eb;
-}
-
-.purchase-card.is-out-of-stock .qty-btn,
-.purchase-card.is-out-of-stock .qty-input {
     color: #9ca3af !important;
-    cursor: not-allowed;
     background: transparent;
+    cursor: not-allowed;
 }
 
 .purchase-card.is-out-of-stock .qty-btn:disabled,
@@ -1431,7 +1421,12 @@ if ($slug !== '') {
     background: #e6d91f;
     transform: translateY(-1px);
 }
-
+.purchase-add-cart:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+    transform: none;
+}
 .purchase-reassurance-card {
     margin-top: 12px;
     padding: 16px 18px;
@@ -2324,6 +2319,7 @@ if ($slug !== '') {
         $nicotineVariants = buildNicotineVariants($attributes, $prixRegulier, $prixPromo);
 $saltNicotineVariants = buildSaltNicotineVariants($attributes, $prixRegulier, $prixPromo);
 $variantCards = [];
+$generalStock = max(0, (int) ($product['stock'] ?? 0));
 
 if (!empty($nicotineVariants)) {
     $variantCards = array_merge(
@@ -2341,6 +2337,11 @@ if (!empty($saltNicotineVariants)) {
 
 $hasNicotineVariants = !empty($nicotineVariants);
 $hasSaltNicotineVariants = !empty($saltNicotineVariants);
+$hasVariantStock = productHasVariantStock($nicotineVariants, $saltNicotineVariants);
+$totalVariantStock = getTotalVariantStock($variantCards);
+
+$productStock = $hasVariantStock ? $totalVariantStock : $generalStock;
+$isProductOutOfStock = $productStock <= 0;
 
 $defaultVariant = null;
 if ($hasNicotineVariants) {
@@ -2375,6 +2376,11 @@ if ($hasNicotineVariants) {
         if ($gamme !== '') {
             $techItems[] = ['label' => 'Gamme', 'value' => $gamme];
         }
+        if ($hasVariantStock) {
+    $techItems[] = ['label' => 'Stock total', 'value' => (string) $totalVariantStock];
+} else {
+    $techItems[] = ['label' => 'Stock', 'value' => (string) $generalStock];
+}
 
         $ratio = getFirstAttributeValue($attributes, 'ratio_pg_vg');
         if ($ratio !== '') {
@@ -2491,106 +2497,33 @@ if ($selnicotine !== '') {
                 </div>
 
                 <section class="product-purchase-bar">
-                    <form method="post" action="panier.php" class="purchase-bundle-form">
-                        <input type="hidden" name="action" value="add_bundle">
-                        <input type="hidden" name="main_product_id" value="<?= (int) $product['id']; ?>">
-                        <input type="hidden" name="redirect_to" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? 'produit.php')); ?>">   
+    <form method="post" action="panier.php" class="purchase-bundle-form">
+        <input type="hidden" name="action" value="add_bundle">
+        <input type="hidden" name="main_product_id" value="<?= (int) $product['id']; ?>">
+        <input type="hidden" name="redirect_to" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? 'produit.php')); ?>">
 
-                        <?php if (!empty($variantCards)): ?>
-            <div style="display:flex;flex-direction:column;gap:12px;">
-                <?php foreach ($variantCards as $card): ?>
-    <?php
-    $qtyFieldId = 'qty_' . $card['key'];
-    $isOutOfStock = ((int) ($card['stock'] ?? 0)) <= 0;
-    ?>
-    <input type="hidden" name="variant_type[<?= e($card['key']); ?>]" value="<?= e($card['type']); ?>">
-    <input type="hidden" name="variant_label[<?= e($card['key']); ?>]" value="<?= e($card['label']); ?>">
-    <input type="hidden" name="variant_stock[<?= e($card['key']); ?>]" value="<?= (int) $card['stock']; ?>">
+        <?php if (empty($variantCards)): ?>
+            <?php $simpleOutOfStock = $generalStock <= 0; ?>
 
-    <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
-                        <div class="purchase-main-inline">
-                            <div class="purchase-product-thumb">
-                                <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($card['display_name']); ?>" loading="lazy" decoding="async">
-                            </div>
-
-                            <div class="purchase-product-meta">
-    <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
-    <?php if (!empty($product['marque'])): ?>
-        <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
-    <?php endif; ?>
-    <div class="purchase-product-note">
-        <?= $isOutOfStock ? 'Rupture de stock' : 'En stock'; ?>
-    </div>
-</div>
-
-                            <div class="purchase-price-stack">
-                                <div class="purchase-price-line">
-                                    <?php if ($card['prix_promo'] !== null): ?>
-                                        <span class="purchase-old-price"><?= e(formatAr($card['prix_regulier'])); ?></span>
-                                        <span class="purchase-final-price is-promo"><?= e(formatAr($card['prix_final'])); ?></span>
-                                    <?php else: ?>
-                                        <span class="purchase-final-price"><?= e(formatAr($card['prix_final'])); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <div class="purchase-qty-wrap">
-    <div class="purchase-qty-controls">
-        <button
-            type="button"
-            class="qty-btn"
-            data-target="<?= e($qtyFieldId); ?>"
-            data-action="minus"
-            aria-label="Diminuer"
-            <?= $isOutOfStock ? 'disabled' : ''; ?>
-        >−</button>
-
-        <input
-            type="number"
-            name="variant_qtys[<?= e($card['type']); ?>][<?= e($card['label']); ?>]"
-            id="<?= e($qtyFieldId); ?>"
-            class="qty-input"
-            value="0"
-            min="0"
-            max="<?= (int) $card['stock']; ?>"
-            inputmode="numeric"
-            <?= $isOutOfStock ? 'disabled' : ''; ?>
-        >
-
-        <button
-            type="button"
-            class="qty-btn"
-            data-target="<?= e($qtyFieldId); ?>"
-            data-action="plus"
-            aria-label="Augmenter"
-            <?= $isOutOfStock ? 'disabled' : ''; ?>
-        >+</button>
-    </div>
-</div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php else: ?>
-            <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
+            <div class="purchase-card <?= $simpleOutOfStock ? 'is-out-of-stock' : ''; ?>">
                 <div class="purchase-main-inline">
                     <div class="purchase-product-thumb">
                         <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($product['nom'] ?? 'Produit'); ?>" loading="lazy" decoding="async">
                     </div>
 
                     <div class="purchase-product-meta">
-    <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
-    <?php if (!empty($product['marque'])): ?>
-        <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
-    <?php endif; ?>
-    <div class="purchase-product-note">
-        <?= $isOutOfStock ? 'Rupture de stock' : 'En stock'; ?>
-    </div>
-</div>
+                        <div class="purchase-product-title"><?= e($product['nom'] ?? 'Produit'); ?></div>
+                        <?php if (!empty($product['marque'])): ?>
+                            <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+                        <?php endif; ?>
+                        <div class="purchase-product-note">
+                            <?= $simpleOutOfStock ? 'En approvisionnement' : 'En stock'; ?>
+                        </div>
+                    </div>
 
                     <div class="purchase-price-stack">
                         <div class="purchase-price-line">
-                            <?php if ($prixPromo): ?>
+                            <?php if ($prixPromo !== null): ?>
                                 <span class="purchase-old-price"><?= e(formatAr($prixRegulier)); ?></span>
                                 <span class="purchase-final-price is-promo"><?= e(formatAr($prixFinal)); ?></span>
                             <?php else: ?>
@@ -2601,113 +2534,126 @@ if ($selnicotine !== '') {
 
                     <div class="purchase-qty-wrap">
                         <div class="purchase-qty-controls">
-                            <button type="button" class="qty-btn" data-target="qty_main" data-action="minus" aria-label="Diminuer">−</button>
-                            <input type="number" name="qty_main" id="qty_main" class="qty-input" value="1" min="1" inputmode="numeric">
-                            <button type="button" class="qty-btn" data-target="qty_main" data-action="plus" aria-label="Augmenter">+</button>
+                            <button
+                                type="button"
+                                class="qty-btn"
+                                data-target="qty_main"
+                                data-action="minus"
+                                aria-label="Diminuer"
+                                <?= $simpleOutOfStock ? 'disabled' : ''; ?>
+                            >−</button>
+
+                            <input
+                                type="number"
+                                name="main_quantity"
+                                id="qty_main"
+                                class="qty-input"
+                                value="1"
+                                min="1"
+                                max="<?= (int) $generalStock; ?>"
+                                inputmode="numeric"
+                                <?= $simpleOutOfStock ? 'disabled' : ''; ?>
+                            >
+
+                            <button
+                                type="button"
+                                class="qty-btn"
+                                data-target="qty_main"
+                                data-action="plus"
+                                aria-label="Augmenter"
+                                <?= $simpleOutOfStock ? 'disabled' : ''; ?>
+                            >+</button>
                         </div>
                     </div>
                 </div>
             </div>
-        <?php endif; ?>
-                        <?php if ($showBoosters): ?>
-                            <div class="purchase-boosters-wrap purchase-boosters is-open" id="boostersBlock">
-                                <button type="button" class="purchase-boosters-toggle" id="boostersToggle" aria-expanded="true" aria-controls="boostersContent">
-                                    <span class="purchase-boosters-toggle-inner">
-                                        <span>Besoin de nicotine ?</span>
-                                        <span class="purchase-boosters-icon">⌃</span>
-                                    </span>
-                                </button>
+        <?php else: ?>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <?php foreach ($variantCards as $card): ?>
+                    <?php
+                    $qtyFieldId = 'qty_' . $card['key'];
+                    $isOutOfStock = ((int) ($card['stock'] ?? 0)) <= 0;
+                    ?>
 
-                                <div class="purchase-boosters-panel" id="boostersContent">
-                                    <?php foreach ($boosters as $booster): ?>
-                                        <?php
-                                        $boosterPrixRegulier = (float) ($booster['prix_regulier'] ?? 0);
-                                        $boosterPrixPromo = isset($booster['prix_promo']) && $booster['prix_promo'] !== null ? (float) $booster['prix_promo'] : null;
-                                        $boosterPrixFinal = $boosterPrixPromo ?: $boosterPrixRegulier;
-                                        $boosterImage = buildProductImagePath(isset($booster['image_principale']) ? (string) $booster['image_principale'] : null);
-                                        $qtyField = 'qty_booster_' . (int) $booster['id'];
-                                        ?>
-                                        <input type="hidden" name="booster_ids[]" value="<?= (int) $booster['id']; ?>">
+                    <input type="hidden" name="variant_type[<?= e($card['key']); ?>]" value="<?= e($card['type']); ?>">
+                    <input type="hidden" name="variant_label[<?= e($card['key']); ?>]" value="<?= e($card['label']); ?>">
+                    <input type="hidden" name="variant_stock[<?= e($card['key']); ?>]" value="<?= (int) $card['stock']; ?>">
 
-                                        <div class="purchase-booster-row">
-                                            <div class="purchase-booster-thumb">
-                                                <img src="<?= e($boosterImage); ?>" alt="<?= e($booster['nom'] ?? 'Booster'); ?>" loading="lazy" decoding="async">
-                                            </div>
+                    <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
+                        <div class="purchase-main-inline">
+                            <div class="purchase-product-thumb">
+                                <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($card['display_name']); ?>" loading="lazy" decoding="async">
+                            </div>
 
-                                            <div class="purchase-booster-meta">
-                                                <div class="purchase-booster-title"><?= e($booster['nom'] ?? 'Booster'); ?></div>
-                                                <?php if (!empty($booster['marque'])): ?>
-                                                    <div class="purchase-booster-brand"><?= e($booster['marque']); ?></div>
-                                                <?php endif; ?>
-                                            </div>
-
-                                            <div class="purchase-booster-price-wrap">
-                                                <div class="purchase-booster-price-line">
-                                                    <?php if ($boosterPrixPromo): ?>
-                                                        <span class="purchase-booster-old-price"><?= e(formatAr($boosterPrixRegulier)); ?></span>
-                                                        <span class="purchase-booster-price is-promo"><?= e(formatAr($boosterPrixFinal)); ?></span>
-                                                    <?php else: ?>
-                                                        <span class="purchase-booster-price"><?= e(formatAr($boosterPrixFinal)); ?></span>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-
-                                            <div class="purchase-booster-qty">
-                                                <div class="purchase-qty-controls">
-                                                    <button type="button" class="qty-btn" data-target="<?= e($qtyField); ?>" data-action="minus" aria-label="Diminuer">−</button>
-                                                    <input type="number" name="booster_qtys[<?= (int) $booster['id']; ?>]" id="<?= e($qtyField); ?>" class="qty-input" value="0" min="0" inputmode="numeric">
-                                                    <button type="button" class="qty-btn" data-target="<?= e($qtyField); ?>" data-action="plus" aria-label="Augmenter">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
+                            <div class="purchase-product-meta">
+                                <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
+                                <?php if (!empty($product['marque'])): ?>
+                                    <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+                                <?php endif; ?>
+                                <div class="purchase-product-note">
+                                    <?= $isOutOfStock ? 'Rupture de stock' : 'En stock'; ?>
                                 </div>
                             </div>
-                        <?php endif; ?>
 
-                        <div class="purchase-footer">
-                            <button type="submit" class="purchase-add-cart">
-                                Ajouter au panier
-                            </button>
-                        </div>
-
-                        <div class="purchase-reassurance-card" aria-label="Réassurances">
-                            <div class="purchase-reassurance-list">
-                                <div class="purchase-reassurance-item">
-                                    <div class="purchase-reassurance-icon">
-                                        <img src="img/produit certifié-icon.svg" alt="Produit authentique" loading="lazy" decoding="async">
-                                    </div>
-                                    <div class="purchase-reassurance-text">
-                                        <h3>100% authentique</h3>
-                                        <p>Fioles premium certifiées importées de France.</p>
-                                    </div>
+                            <div class="purchase-price-stack">
+                                <div class="purchase-price-line">
+                                    <?php if ($card['prix_promo'] !== null): ?>
+                                        <span class="purchase-old-price"><?= e(formatAr((float) $card['prix_regulier'])); ?></span>
+                                        <span class="purchase-final-price is-promo"><?= e(formatAr((float) $card['prix_final'])); ?></span>
+                                    <?php else: ?>
+                                        <span class="purchase-final-price"><?= e(formatAr((float) $card['prix_final'])); ?></span>
+                                    <?php endif; ?>
                                 </div>
+                            </div>
 
-                                <div class="purchase-reassurance-item">
-                                    <div class="purchase-reassurance-icon">
-                                        <img src="img/livraison-icon.svg" alt="Livraison express" loading="lazy" decoding="async">
-                                    </div>
-                                    <div class="purchase-reassurance-text">
-                                        <h3>Livraison express</h3>
-                                        <p>Le jour même sur Antananarivo.</p>
-                                    </div>
-                                </div>
+                            <div class="purchase-qty-wrap">
+                                <div class="purchase-qty-controls">
+                                    <button
+                                        type="button"
+                                        class="qty-btn"
+                                        data-target="<?= e($qtyFieldId); ?>"
+                                        data-action="minus"
+                                        aria-label="Diminuer"
+                                        <?= $isOutOfStock ? 'disabled' : ''; ?>
+                                    >−</button>
 
-                                <div class="purchase-reassurance-item">
-                                    <div class="purchase-reassurance-icon">
-                                        <img src="img/paiement-icon.svg" alt="Paiement flexible" loading="lazy" decoding="async">
-                                    </div>
-                                    <div class="purchase-reassurance-text">
-                                        <h3>Paiement flexible</h3>
-                                        <p>MVola, Orange Money, Airtel Money & Cash.</p>
-                                    </div>
+                                    <input
+                                        type="number"
+                                        name="variant_qtys[<?= e($card['type']); ?>][<?= e($card['label']); ?>]"
+                                        id="<?= e($qtyFieldId); ?>"
+                                        class="qty-input"
+                                        value="0"
+                                        min="0"
+                                        max="<?= (int) $card['stock']; ?>"
+                                        inputmode="numeric"
+                                        <?= $isOutOfStock ? 'disabled' : ''; ?>
+                                    >
+
+                                    <button
+                                        type="button"
+                                        class="qty-btn"
+                                        data-target="<?= e($qtyFieldId); ?>"
+                                        data-action="plus"
+                                        aria-label="Augmenter"
+                                        <?= $isOutOfStock ? 'disabled' : ''; ?>
+                                    >+</button>
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </section>
+                    </div>
+                <?php endforeach; ?>
             </div>
-        </section>
+        <?php endif; ?>
+
+        <?php $canAddToCart = $hasVariantStock ? ($totalVariantStock > 0) : ($generalStock > 0); ?>
+
+        <div class="purchase-footer">
+            <button type="submit" class="purchase-add-cart" <?= !$canAddToCart ? 'disabled' : ''; ?>>
+                <?= !$canAddToCart ? 'EN APPROVISIONNEMENT' : 'AJOUTER AU PANIER'; ?>
+            </button>
+        </div>
+    </form>
+</section>
 
         <?php if ($descriptionLongue !== '' || $showNicotineHelp): ?>
             <section class="product-description-panel">
