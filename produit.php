@@ -866,17 +866,6 @@ if ($slug !== '') {
     align-items: start;
 }
 
-.product-left-column,
-.product-right-column {
-    min-width: 0;
-}
-
-.product-right-column {
-    position: sticky;
-    top: 18px;
-    align-self: start;
-}
-
 .product-gallery-panel,
 .product-content-panel,
 .product-description-panel,
