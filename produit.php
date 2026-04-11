@@ -1062,7 +1062,68 @@ if ($slug !== '') {
 .purchase-card {
     padding: 14px 18px;
 }
+.purchase-card.is-out-of-stock {
+    background: #f8fafc;
+    border-color: #d1d5db;
+}
 
+.purchase-card.is-out-of-stock .purchase-product-thumb img {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+.purchase-card.is-out-of-stock .purchase-product-title,
+.purchase-card.is-out-of-stock .purchase-product-brand,
+.purchase-card.is-out-of-stock .purchase-final-price,
+.purchase-card.is-out-of-stock .purchase-old-price {
+    color: #9ca3af !important;
+}
+
+.purchase-card.is-out-of-stock .purchase-product-note {
+    color: #b91c1c !important;
+}
+
+.purchase-card.is-out-of-stock .purchase-qty-controls {
+    border-color: #d1d5db;
+    background: #f3f4f6;
+}
+
+.purchase-card.is-out-of-stock .qty-btn,
+.purchase-card.is-out-of-stock .qty-input {
+    color: #c4c7ce !important;
+    background: transparent;
+    cursor: not-allowed;
+}
+
+.purchase-card.is-out-of-stock .qty-btn:disabled,
+.purchase-card.is-out-of-stock .qty-input:disabled {
+    opacity: 1;
+}
+
+.purchase-card.is-out-of-stock .purchase-product-title,
+.purchase-card.is-out-of-stock .purchase-product-brand,
+.purchase-card.is-out-of-stock .purchase-final-price,
+.purchase-card.is-out-of-stock .purchase-old-price,
+.purchase-card.is-out-of-stock .purchase-product-note {
+    color: #6b7280 !important;
+}
+
+.purchase-card.is-out-of-stock .purchase-qty-controls {
+    border-color: #cbd5e1;
+    background: #e5e7eb;
+}
+
+.purchase-card.is-out-of-stock .qty-btn,
+.purchase-card.is-out-of-stock .qty-input {
+    color: #9ca3af !important;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.purchase-card.is-out-of-stock .qty-btn:disabled,
+.purchase-card.is-out-of-stock .qty-input:disabled {
+    opacity: 1;
+}
 .purchase-main-inline {
     display: grid;
     grid-template-columns: 60px minmax(0, 1fr) auto auto;
@@ -1838,39 +1899,6 @@ if ($slug !== '') {
         padding: 12px 14px;
         border-radius: 18px;
     }
-    .purchase-card.is-out-of-stock {
-    opacity: 0.5;
-    background: #f3f4f6;
-    border-color: #d1d5db;
-}
-
-.purchase-card.is-out-of-stock .purchase-product-title,
-.purchase-card.is-out-of-stock .purchase-product-brand,
-.purchase-card.is-out-of-stock .purchase-final-price,
-.purchase-card.is-out-of-stock .purchase-old-price {
-    color: #6b7280 !important;
-}
-
-.purchase-card.is-out-of-stock .purchase-product-note {
-    color: #b91c1c;
-}
-
-.purchase-card.is-out-of-stock .purchase-qty-controls {
-    border-color: #cbd5e1;
-    background: #e5e7eb;
-}
-
-.purchase-card.is-out-of-stock .qty-btn,
-.purchase-card.is-out-of-stock .qty-input {
-    color: #9ca3af;
-    cursor: not-allowed;
-    background: transparent;
-}
-
-.purchase-card.is-out-of-stock .qty-btn:disabled,
-.purchase-card.is-out-of-stock .qty-input:disabled {
-    opacity: 1;
-}
 
     .purchase-main-inline {
         grid-template-columns: 46px minmax(0, 1fr) auto auto;
@@ -2480,18 +2508,20 @@ if ($selnicotine !== '') {
     <input type="hidden" name="variant_stock[<?= e($card['key']); ?>]" value="<?= (int) $card['stock']; ?>">
 
     <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
-                    <div class="purchase-card">
                         <div class="purchase-main-inline">
                             <div class="purchase-product-thumb">
                                 <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($card['display_name']); ?>" loading="lazy" decoding="async">
                             </div>
 
                             <div class="purchase-product-meta">
-                                <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
-                                <?php if (!empty($product['marque'])): ?>
-                                    <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
-                                <?php endif; ?>
-                            </div>
+    <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
+    <?php if (!empty($product['marque'])): ?>
+        <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+    <?php endif; ?>
+    <div class="purchase-product-note">
+        <?= $isOutOfStock ? 'Rupture de stock' : 'En stock'; ?>
+    </div>
+</div>
 
                             <div class="purchase-price-stack">
                                 <div class="purchase-price-line">
@@ -2542,7 +2572,7 @@ if ($selnicotine !== '') {
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <div class="purchase-card">
+            <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
                 <div class="purchase-main-inline">
                     <div class="purchase-product-thumb">
                         <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($product['nom'] ?? 'Produit'); ?>" loading="lazy" decoding="async">
