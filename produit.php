@@ -124,7 +124,352 @@ function formatAr(float $price): string
 {
     return number_format($price, 0, '.', ' ') . ' Ar';
 }
+function parsePriceValue(string $raw): ?float
+{
+    $value = trim($raw);
+    if ($value === '') {
+        return null;
+    }
 
+    $value = str_replace(['Ar', 'ariary', ' '], '', $value);
+    $value = str_replace(',', '.', $value);
+    if (!is_numeric($value)) {
+        return null;
+    }
+
+    $parsed = (float) $value;
+    return $parsed >= 0 ? $parsed : null;
+}
+function parseStockValue(string $raw): ?int
+{
+    $value = trim($raw);
+    if ($value === '') {
+        return null;
+    }
+
+    $value = str_replace([' ', ','], '', $value);
+
+    if (!is_numeric($value)) {
+        return null;
+    }
+
+    $parsed = (int) $value;
+    return $parsed >= 0 ? $parsed : null;
+}
+
+function normalizeVariantKey(string $value): string
+{
+    $normalized = normalizeText($value);
+    $normalized = preg_replace('/[^a-z0-9]+/i', '', $normalized) ?? '';
+    return trim((string) $normalized);
+}
+
+/**
+ * @param array<string, array<int, string>> $attributes
+ * /**
+ * @param array<string, array<int, string>> $attributes
+ * @return array<int, array{
+ *   label: string,
+ *   prix_regulier: float,
+ *   prix_promo: float|null,
+ *   prix_final: float,
+ *   stock: int
+ * }>
+ */
+function buildNicotineVariants(array $attributes, float $baseRegular, ?float $basePromo): array
+{
+    $labels = [];
+    $rawNicotineValues = $attributes['nicotine_mg'] ?? [];
+
+    foreach ($rawNicotineValues as $rawValue) {
+        $parts = preg_split('/\s*(?:,|;|\||\/)\s*/', (string) $rawValue) ?: [];
+        foreach ($parts as $part) {
+            $label = trim((string) $part);
+            if ($label === '') {
+                continue;
+            }
+
+            if (preg_match('/mg/i', $label) !== 1 && preg_match('/^\d+(\.\d+)?$/', $label) === 1) {
+                $label .= 'mg';
+            }
+
+            $labels[] = $label;
+        }
+    }
+
+    $labels = array_values(array_unique($labels));
+
+    if (count($labels) <= 1) {
+        return [];
+    }
+
+    $regularOverrides = [];
+    $promoOverrides = [];
+    $stockOverrides = [];
+
+    foreach ($attributes as $attrName => $attrValues) {
+        $attrKey = normalizeVariantKey($attrName);
+
+        foreach ($attrValues as $rawAttrValue) {
+            $attrValue = trim((string) $rawAttrValue);
+            if ($attrValue === '') {
+                continue;
+            }
+
+            if ($attrKey === 'nicotineprix' || $attrKey === 'prixnicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $price = parsePriceValue((string) $segments[1]);
+                    if ($key !== '' && $price !== null) {
+                        $regularOverrides[$key] = $price;
+                    }
+                }
+            }
+
+            if ($attrKey === 'nicotineprixpromo' || $attrKey === 'prixpromonicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $price = parsePriceValue((string) $segments[1]);
+                    if ($key !== '' && $price !== null) {
+                        $promoOverrides[$key] = $price;
+                    }
+                }
+            }
+
+            if ($attrKey === 'nicotinestock' || $attrKey === 'stocknicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $stock = parseStockValue((string) $segments[1]);
+                    if ($key !== '' && $stock !== null) {
+                        $stockOverrides[$key] = $stock;
+                    }
+                }
+            }
+        }
+    }
+
+    $variants = [];
+    foreach ($labels as $label) {
+        $key = normalizeVariantKey($label);
+        $regularPrice = $regularOverrides[$key] ?? $baseRegular;
+        $promoPrice = $promoOverrides[$key] ?? $basePromo;
+        $finalPrice = $promoPrice !== null ? $promoPrice : $regularPrice;
+        $stock = $stockOverrides[$key] ?? 0;
+
+        $variants[] = [
+            'label' => $label,
+            'prix_regulier' => $regularPrice,
+            'prix_promo' => $promoPrice,
+            'prix_final' => $finalPrice,
+            'stock' => $stock,
+        ];
+    }
+
+    return $variants;
+}
+/**
+ * @param array<string, array<int, string>> $attributes
+ * /**
+ * @param array<string, array<int, string>> $attributes
+ * @return array<int, array{
+ *   label: string,
+ *   prix_regulier: float,
+ *   prix_promo: float|null,
+ *   prix_final: float,
+ *   stock: int
+ * }>
+ */
+function buildSaltNicotineVariants(array $attributes, float $baseRegular, ?float $basePromo): array
+{
+    $labels = [];
+    $rawValues = $attributes['sel_nicotine_mg'] ?? [];
+
+    foreach ($rawValues as $rawValue) {
+        $parts = preg_split('/\s*(?:,|;|\||\/)\s*/', (string) $rawValue) ?: [];
+        foreach ($parts as $part) {
+            $label = trim((string) $part);
+            if ($label === '') {
+                continue;
+            }
+
+            if (preg_match('/mg/i', $label) !== 1 && preg_match('/^\d+(\.\d+)?$/', $label) === 1) {
+                $label .= 'mg';
+            }
+
+            $labels[] = $label;
+        }
+    }
+
+    $labels = array_values(array_unique($labels));
+
+    if (count($labels) <= 1) {
+        return [];
+    }
+
+    $regularOverrides = [];
+    $promoOverrides = [];
+    $stockOverrides = [];
+
+    foreach ($attributes as $attrName => $attrValues) {
+        $attrKey = normalizeVariantKey($attrName);
+
+        foreach ($attrValues as $rawAttrValue) {
+            $attrValue = trim((string) $rawAttrValue);
+            if ($attrValue === '') {
+                continue;
+            }
+
+            if ($attrKey === 'selnicotineprix' || $attrKey === 'prixselnicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $price = parsePriceValue((string) $segments[1]);
+                    if ($key !== '' && $price !== null) {
+                        $regularOverrides[$key] = $price;
+                    }
+                }
+            }
+
+            if ($attrKey === 'selnicotineprixpromo' || $attrKey === 'prixpromoselnicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $price = parsePriceValue((string) $segments[1]);
+                    if ($key !== '' && $price !== null) {
+                        $promoOverrides[$key] = $price;
+                    }
+                }
+            }
+
+            if ($attrKey === 'selnicotinestock' || $attrKey === 'stockselnicotine') {
+                $pairs = preg_split('/\s*(?:\||;|,)\s*/', $attrValue) ?: [];
+                foreach ($pairs as $pair) {
+                    if (strpos($pair, '=') === false && strpos($pair, ':') === false) {
+                        continue;
+                    }
+
+                    $segments = preg_split('/\s*(?:=|:)\s*/', $pair, 2) ?: [];
+                    if (count($segments) !== 2) {
+                        continue;
+                    }
+
+                    $key = normalizeVariantKey((string) $segments[0]);
+                    $stock = parseStockValue((string) $segments[1]);
+                    if ($key !== '' && $stock !== null) {
+                        $stockOverrides[$key] = $stock;
+                    }
+                }
+            }
+        }
+    }
+
+    $variants = [];
+    foreach ($labels as $label) {
+        $key = normalizeVariantKey($label);
+        $regularPrice = $regularOverrides[$key] ?? $baseRegular;
+        $promoPrice = $promoOverrides[$key] ?? $basePromo;
+        $finalPrice = $promoPrice !== null ? $promoPrice : $regularPrice;
+        $stock = $stockOverrides[$key] ?? 0;
+
+        $variants[] = [
+            'label' => $label,
+            'prix_regulier' => $regularPrice,
+            'prix_promo' => $promoPrice,
+            'prix_final' => $finalPrice,
+            'stock' => $stock,
+        ];
+    }
+
+    return $variants;
+}
+/**
+ * @param array<int, array{label: string, prix_regulier: float, prix_promo: float|null, prix_final: float}> $variants
+ * @return array<int, array{
+ *   type: string,
+ *   type_label: string,
+ *   label: string,
+ *   display_name: string,
+ *   prix_regulier: float,
+ *   prix_promo: float|null,
+ *   prix_final: float,
+ *   key: string
+ * }>
+ */
+function buildVariantCards(array $variants, string $type, string $typeLabel, string $productName): array
+{
+    $cards = [];
+
+    foreach ($variants as $variant) {
+        $label = trim((string) ($variant['label'] ?? ''));
+        if ($label === '') {
+            continue;
+        }
+
+        $cards[] = [
+            'type' => $type,
+            'type_label' => $typeLabel,
+            'label' => $label,
+            'display_name' => trim($productName . ' (' . $label . ')'),
+            'prix_regulier' => (float) ($variant['prix_regulier'] ?? 0),
+            'prix_promo' => isset($variant['prix_promo']) && $variant['prix_promo'] !== null
+                ? (float) $variant['prix_promo']
+                : null,
+            'prix_final' => (float) ($variant['prix_final'] ?? 0),
+            'stock' => (int) ($variant['stock'] ?? 0),
+            'key' => $type . '_' . normalizeVariantKey($label),
+        ];
+    }
+
+    return $cards;
+}
 function extractMlValue(string $value): int
 {
     if (preg_match('/(\d+)/', $value, $matches) === 1) {
@@ -1493,6 +1838,39 @@ if ($slug !== '') {
         padding: 12px 14px;
         border-radius: 18px;
     }
+    .purchase-card.is-out-of-stock {
+    opacity: 0.5;
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.purchase-card.is-out-of-stock .purchase-product-title,
+.purchase-card.is-out-of-stock .purchase-product-brand,
+.purchase-card.is-out-of-stock .purchase-final-price,
+.purchase-card.is-out-of-stock .purchase-old-price {
+    color: #6b7280 !important;
+}
+
+.purchase-card.is-out-of-stock .purchase-product-note {
+    color: #b91c1c;
+}
+
+.purchase-card.is-out-of-stock .purchase-qty-controls {
+    border-color: #cbd5e1;
+    background: #e5e7eb;
+}
+
+.purchase-card.is-out-of-stock .qty-btn,
+.purchase-card.is-out-of-stock .qty-input {
+    color: #9ca3af;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.purchase-card.is-out-of-stock .qty-btn:disabled,
+.purchase-card.is-out-of-stock .qty-input:disabled {
+    opacity: 1;
+}
 
     .purchase-main-inline {
         grid-template-columns: 46px minmax(0, 1fr) auto auto;
@@ -1915,6 +2293,39 @@ if ($slug !== '') {
         $prixRegulier = (float) ($product['prix_regulier'] ?? 0);
         $prixPromo = isset($product['prix_promo']) && $product['prix_promo'] !== null ? (float) $product['prix_promo'] : null;
         $prixFinal = $prixPromo ?: $prixRegulier;
+        $nicotineVariants = buildNicotineVariants($attributes, $prixRegulier, $prixPromo);
+$saltNicotineVariants = buildSaltNicotineVariants($attributes, $prixRegulier, $prixPromo);
+$variantCards = [];
+
+if (!empty($nicotineVariants)) {
+    $variantCards = array_merge(
+        $variantCards,
+        buildVariantCards($nicotineVariants, 'nicotine_mg', 'Dosage nicotine', (string) ($product['nom'] ?? 'Produit'))
+    );
+}
+
+if (!empty($saltNicotineVariants)) {
+    $variantCards = array_merge(
+        $variantCards,
+        buildVariantCards($saltNicotineVariants, 'sel_nicotine_mg', 'Sel de nicotine', (string) ($product['nom'] ?? 'Produit'))
+    );
+}
+
+$hasNicotineVariants = !empty($nicotineVariants);
+$hasSaltNicotineVariants = !empty($saltNicotineVariants);
+
+$defaultVariant = null;
+if ($hasNicotineVariants) {
+    $defaultVariant = $nicotineVariants[0];
+} elseif ($hasSaltNicotineVariants) {
+    $defaultVariant = $saltNicotineVariants[0];
+}
+
+        if ($defaultVariant) {
+            $prixRegulier = (float) $defaultVariant['prix_regulier'];
+            $prixPromo = $defaultVariant['prix_promo'] !== null ? (float) $defaultVariant['prix_promo'] : null;
+            $prixFinal = (float) $defaultVariant['prix_final'];
+        }
 
         $galleryImages = [];
         $mainImage = buildProductImagePath(isset($product['image_principale']) ? (string) $product['image_principale'] : null);
@@ -1942,7 +2353,9 @@ if ($slug !== '') {
             $techItems[] = ['label' => 'PG/VG', 'value' => $ratio];
         }
 
-        $nicotine = getFirstAttributeValue($attributes, 'nicotine_mg');
+        $nicotine = $hasNicotineVariants
+            ? implode(', ', array_map(static fn(array $variant): string => $variant['label'], $nicotineVariants))
+            : getFirstAttributeValue($attributes, 'nicotine_mg');
         if ($nicotine !== '') {
             $techItems[] = ['label' => 'Tx nicotine', 'value' => $nicotine];
         }
@@ -2026,10 +2439,10 @@ if ($selnicotine !== '') {
 
                     <div class="product-price-inline">
                         <?php if ($prixPromo): ?>
-                            <span class="product-price-old"><?= e(formatAr($prixRegulier)); ?></span>
-                            <span class="product-price-current"><?= e(formatAr($prixFinal)); ?></span>
+                            <span class="product-price-old js-price-old"><?= e(formatAr($prixRegulier)); ?></span>
+                            <span class="product-price-current js-price-final"><?= e(formatAr($prixFinal)); ?></span>
                         <?php else: ?>
-                            <span class="product-price-current no-promo"><?= e(formatAr($prixFinal)); ?></span>
+                            <span class="product-price-current no-promo js-price-final"><?= e(formatAr($prixFinal)); ?></span>
                         <?php endif; ?>
                     </div>
 
@@ -2054,43 +2467,118 @@ if ($selnicotine !== '') {
                         <input type="hidden" name="action" value="add_bundle">
                         <input type="hidden" name="main_product_id" value="<?= (int) $product['id']; ?>">
                         <input type="hidden" name="redirect_to" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? 'produit.php')); ?>">   
-                        <div class="purchase-card">
-                            <div class="purchase-main-inline">
-                                <div class="purchase-product-thumb">
-                                    <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($product['nom'] ?? 'Produit'); ?>" loading="lazy" decoding="async">
-                                </div>
 
-                                <div class="purchase-product-meta">
-                                    <div class="purchase-product-title"><?= e($product['nom'] ?? 'Produit'); ?></div>
-                                    <?php if (!empty($product['marque'])): ?>
-                                        <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+                        <?php if (!empty($variantCards)): ?>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <?php foreach ($variantCards as $card): ?>
+    <?php
+    $qtyFieldId = 'qty_' . $card['key'];
+    $isOutOfStock = ((int) ($card['stock'] ?? 0)) <= 0;
+    ?>
+    <input type="hidden" name="variant_type[<?= e($card['key']); ?>]" value="<?= e($card['type']); ?>">
+    <input type="hidden" name="variant_label[<?= e($card['key']); ?>]" value="<?= e($card['label']); ?>">
+    <input type="hidden" name="variant_stock[<?= e($card['key']); ?>]" value="<?= (int) $card['stock']; ?>">
+
+    <div class="purchase-card <?= $isOutOfStock ? 'is-out-of-stock' : ''; ?>">
+                    <div class="purchase-card">
+                        <div class="purchase-main-inline">
+                            <div class="purchase-product-thumb">
+                                <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($card['display_name']); ?>" loading="lazy" decoding="async">
+                            </div>
+
+                            <div class="purchase-product-meta">
+                                <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
+                                <?php if (!empty($product['marque'])): ?>
+                                    <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="purchase-price-stack">
+                                <div class="purchase-price-line">
+                                    <?php if ($card['prix_promo'] !== null): ?>
+                                        <span class="purchase-old-price"><?= e(formatAr($card['prix_regulier'])); ?></span>
+                                        <span class="purchase-final-price is-promo"><?= e(formatAr($card['prix_final'])); ?></span>
+                                    <?php else: ?>
+                                        <span class="purchase-final-price"><?= e(formatAr($card['prix_final'])); ?></span>
                                     <?php endif; ?>
-                                    <?php if ($nicotine !== '' && isZeroNicotineValue($nicotine)): ?>
-                                        <div class="purchase-product-note">Liquide non nicotiné</div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="purchase-price-stack">
-                                    <div class="purchase-price-line">
-                                        <?php if ($prixPromo): ?>
-                                            <span class="purchase-old-price"><?= e(formatAr($prixRegulier)); ?></span>
-                                            <span class="purchase-final-price is-promo"><?= e(formatAr($prixFinal)); ?></span>
-                                        <?php else: ?>
-                                            <span class="purchase-final-price"><?= e(formatAr($prixFinal)); ?></span>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <div class="purchase-qty-wrap">
-                                    <div class="purchase-qty-controls">
-                                        <button type="button" class="qty-btn" data-target="qty_main" data-action="minus" aria-label="Diminuer">−</button>
-                                        <input type="number" name="qty_main" id="qty_main" class="qty-input" value="1" min="1" inputmode="numeric">
-                                        <button type="button" class="qty-btn" data-target="qty_main" data-action="plus" aria-label="Augmenter">+</button>
-                                    </div>
                                 </div>
                             </div>
-                        </div>
 
+                            <div class="purchase-qty-wrap">
+    <div class="purchase-qty-controls">
+        <button
+            type="button"
+            class="qty-btn"
+            data-target="<?= e($qtyFieldId); ?>"
+            data-action="minus"
+            aria-label="Diminuer"
+            <?= $isOutOfStock ? 'disabled' : ''; ?>
+        >−</button>
+
+        <input
+            type="number"
+            name="variant_qtys[<?= e($card['type']); ?>][<?= e($card['label']); ?>]"
+            id="<?= e($qtyFieldId); ?>"
+            class="qty-input"
+            value="0"
+            min="0"
+            max="<?= (int) $card['stock']; ?>"
+            inputmode="numeric"
+            <?= $isOutOfStock ? 'disabled' : ''; ?>
+        >
+
+        <button
+            type="button"
+            class="qty-btn"
+            data-target="<?= e($qtyFieldId); ?>"
+            data-action="plus"
+            aria-label="Augmenter"
+            <?= $isOutOfStock ? 'disabled' : ''; ?>
+        >+</button>
+    </div>
+</div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="purchase-card">
+                <div class="purchase-main-inline">
+                    <div class="purchase-product-thumb">
+                        <img src="<?= e($galleryImages[0]); ?>" alt="<?= e($product['nom'] ?? 'Produit'); ?>" loading="lazy" decoding="async">
+                    </div>
+
+                    <div class="purchase-product-meta">
+    <div class="purchase-product-title"><?= e($card['display_name']); ?></div>
+    <?php if (!empty($product['marque'])): ?>
+        <div class="purchase-product-brand"><?= e($product['marque']); ?></div>
+    <?php endif; ?>
+    <div class="purchase-product-note">
+        <?= $isOutOfStock ? 'Rupture de stock' : 'En stock'; ?>
+    </div>
+</div>
+
+                    <div class="purchase-price-stack">
+                        <div class="purchase-price-line">
+                            <?php if ($prixPromo): ?>
+                                <span class="purchase-old-price"><?= e(formatAr($prixRegulier)); ?></span>
+                                <span class="purchase-final-price is-promo"><?= e(formatAr($prixFinal)); ?></span>
+                            <?php else: ?>
+                                <span class="purchase-final-price"><?= e(formatAr($prixFinal)); ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="purchase-qty-wrap">
+                        <div class="purchase-qty-controls">
+                            <button type="button" class="qty-btn" data-target="qty_main" data-action="minus" aria-label="Diminuer">−</button>
+                            <input type="number" name="qty_main" id="qty_main" class="qty-input" value="1" min="1" inputmode="numeric">
+                            <button type="button" class="qty-btn" data-target="qty_main" data-action="plus" aria-label="Augmenter">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
                         <?php if ($showBoosters): ?>
                             <div class="purchase-boosters-wrap purchase-boosters is-open" id="boostersBlock">
                                 <button type="button" class="purchase-boosters-toggle" id="boostersToggle" aria-expanded="true" aria-controls="boostersContent">
@@ -2371,7 +2859,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    const qtyInputs = document.querySelectorAll('.qty-input');
+    const qtyInputs = document.querySelectorAll('input.qty-input[type="number"]');
 
     qtyInputs.forEach(function (input) {
         input.addEventListener('input', function () {
@@ -2402,6 +2890,46 @@ document.addEventListener('DOMContentLoaded', function () {
             const isOpen = boostersBlock.classList.contains('is-open');
             boostersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
+    }
+
+    const nicotineVariant = document.getElementById('nicotine_variant');
+    if (nicotineVariant) {
+        const priceTargetsFinal = document.querySelectorAll('.js-price-final');
+        const priceTargetsOld = document.querySelectorAll('.js-price-old');
+
+        const formatAr = function (amount) {
+            const value = Math.max(0, Math.round(amount));
+            return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Ar';
+        };
+
+        const updatePriceFromVariant = function () {
+            const selectedOption = nicotineVariant.options[nicotineVariant.selectedIndex];
+            if (!selectedOption) {
+                return;
+            }
+
+            const regular = parseFloat(selectedOption.dataset.priceRegular || '0');
+            const promoRaw = selectedOption.dataset.pricePromo || '';
+            const promo = promoRaw !== '' ? parseFloat(promoRaw) : NaN;
+            const finalAmount = Number.isNaN(promo) ? regular : promo;
+
+            priceTargetsFinal.forEach(function (node) {
+                node.textContent = formatAr(finalAmount);
+            });
+
+            priceTargetsOld.forEach(function (node) {
+                if (Number.isNaN(promo)) {
+                    node.style.display = 'none';
+                    return;
+                }
+
+                node.style.display = '';
+                node.textContent = formatAr(regular);
+            });
+        };
+
+        nicotineVariant.addEventListener('change', updatePriceFromVariant);
+        updatePriceFromVariant();
     }
 });
 </script>
