@@ -2477,7 +2477,7 @@ if ($selnicotine !== '') {
                             <div class="product-tech-title">Fiche technique</div>
                             <ul class="product-tech-list">
                                 <?php foreach ($techItems as $item): ?>
-                                    <li><strong><?= e($item['label']); ?> :</strong> <?= e($item['value']); ?></li>
+                                    <li><em><?= e($item['label']); ?> :</em> <?= e($item['value']); ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
@@ -2715,8 +2715,7 @@ if ($selnicotine !== '') {
         </div>
     </form>
 </section>
-
-        <?php if ($descriptionLongue !== '' || $showNicotineHelp): ?>
+</div> </section> <?php if ($descriptionLongue !== '' || $showNicotineHelp): ?>
             <section class="product-description-panel">
                 <div class="product-description-content">
                     <?php if ($descriptionLongue !== '' && descriptionLooksLikeHtml($descriptionLongue)): ?>
@@ -2734,23 +2733,23 @@ if ($selnicotine !== '') {
 
                         <p>
                             Un e-liquide sans nicotine peut facilement être personnalisé en y ajoutant des boosters de nicotine.
-                            Un booster est un petit flacon, généralement de <strong>10 ml</strong>, contenant une forte concentration
-                            de nicotine, souvent à <strong>20 mg/ml</strong>.
+                            Un booster est un petit flacon, généralement de 10 ml, contenant une forte concentration
+                            de nicotine, souvent à 20 mg/ml.
                         </p>
 
-                        <p><strong>👉 Pour l’utiliser, il suffit de :</strong></p>
+                        <p>👉 Pour l’utiliser, il suffit de :</p>
                         <ul>
                             <li>Ouvrir votre flacon d’e-liquide, souvent en grand format type 50 ml ou 100 ml</li>
                             <li>Ajouter le nombre de boosters souhaité selon le dosage désiré</li>
                             <li>Refermer puis bien secouer le mélange pour homogénéiser</li>
                         </ul>
 
-                        <p><strong>💡 Exemple :</strong></p>
+                        <p>💡 Exemple :</p>
                         <div class="nicotine-help-image">
                             <img src="img/produits/dosage-nicotine-50ml.jpg" alt="Exemple de dosage nicotine e-liquide 50ml" loading="lazy" decoding="async">
                         </div>
 
-                        <p><strong>⚠️ Important :</strong></p>
+                        <p>⚠️ Important :</p>
                         <ul>
                             <li>Plus vous ajoutez de boosters, plus le goût peut légèrement diminuer</li>
                             <li>Respectez les dosages recommandés pour une expérience optimale</li>
