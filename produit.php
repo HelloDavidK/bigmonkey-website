@@ -2454,7 +2454,6 @@ if ($selnicotine !== '') {
                     </div>
                 </div>
             </div>
-
             <div class="product-right-column">
                 <div class="product-content-panel">
                     <h1 class="product-title"><?= e($product['nom'] ?? 'Produit'); ?></h1>
@@ -2635,7 +2634,80 @@ if ($selnicotine !== '') {
         <?php endif; ?>
 
         <?php $canAddToCart = $hasVariantStock ? ($totalVariantStock > 0) : ($generalStock > 0); ?>
+<?php if ($showBoosters): ?>
+            <div class="purchase-boosters-wrap purchase-boosters" id="boostersBlock">
+                <button
+                    type="button"
+                    class="purchase-boosters-toggle"
+                    id="boostersToggle"
+                    aria-expanded="false"
+                    aria-controls="boostersPanel"
+                >
+                    <span class="purchase-boosters-toggle-inner">
+                        Ajouter des boosters
+                        <span class="purchase-boosters-icon" aria-hidden="true">⌄</span>
+                    </span>
+                </button>
 
+                <div class="purchase-boosters-panel" id="boostersPanel">
+                    <?php foreach ($boosters as $booster): ?>
+                        <?php
+                        $boosterId = (int) ($booster['id'] ?? 0);
+                        if ($boosterId <= 0) {
+                            continue;
+                        }
+                        $boosterQtyFieldId = 'qty_booster_' . $boosterId;
+                        $boosterPrixRegulier = (float) ($booster['prix_regulier'] ?? 0);
+                        $boosterPrixPromo = isset($booster['prix_promo']) && $booster['prix_promo'] !== null
+                            ? (float) $booster['prix_promo']
+                            : null;
+                        $boosterPrixFinal = $boosterPrixPromo !== null ? $boosterPrixPromo : $boosterPrixRegulier;
+                        $boosterImage = buildProductImagePath(isset($booster['image_principale']) ? (string) $booster['image_principale'] : null);
+                        ?>
+                        <div class="purchase-booster-row">
+                            <div class="purchase-booster-thumb">
+                                <img src="<?= e($boosterImage); ?>" alt="<?= e($booster['nom'] ?? 'Booster'); ?>" loading="lazy" decoding="async">
+                            </div>
+
+                            <div class="purchase-booster-meta">
+                                <p class="purchase-booster-title"><?= e($booster['nom'] ?? 'Booster'); ?></p>
+                                <?php if (!empty($booster['marque'])): ?>
+                                    <p class="purchase-booster-brand"><?= e($booster['marque']); ?></p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="purchase-booster-price-wrap">
+                                <div class="purchase-booster-price-line">
+                                    <?php if ($boosterPrixPromo !== null): ?>
+                                        <span class="purchase-booster-old-price"><?= e(formatAr($boosterPrixRegulier)); ?></span>
+                                        <span class="purchase-booster-price is-promo"><?= e(formatAr($boosterPrixFinal)); ?></span>
+                                    <?php else: ?>
+                                        <span class="purchase-booster-price"><?= e(formatAr($boosterPrixFinal)); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="purchase-booster-qty">
+                                <div class="purchase-qty-controls">
+                                    <button type="button" class="qty-btn" data-target="<?= e($boosterQtyFieldId); ?>" data-action="minus" aria-label="Diminuer booster">−</button>
+                                    <input
+                                        type="number"
+                                        name="booster_qtys[<?= $boosterId; ?>]"
+                                        id="<?= e($boosterQtyFieldId); ?>"
+                                        class="qty-input"
+                                        value="0"
+                                        min="0"
+                                        max="99"
+                                        inputmode="numeric"
+                                    >
+                                    <button type="button" class="qty-btn" data-target="<?= e($boosterQtyFieldId); ?>" data-action="plus" aria-label="Augmenter booster">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <div class="purchase-footer">
             <button type="submit" class="purchase-add-cart" <?= !$canAddToCart ? 'disabled' : ''; ?>>
                 <?= !$canAddToCart ? 'EN APPROVISIONNEMENT' : 'AJOUTER AU PANIER'; ?>
